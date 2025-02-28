@@ -5,7 +5,7 @@ warnings.simplefilter('error')
 
 # 標準化
 def normal(data):
-    data = data.astype('float32')
+    data = data.astype('float32') / 255
 
     R,G,B = np.dsplit(data, 3)
     R = np.squeeze(R)

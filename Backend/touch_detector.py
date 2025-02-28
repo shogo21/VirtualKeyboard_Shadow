@@ -11,6 +11,7 @@ import numpy as np
 
 WINDOW_SIZE = 1
 NUM_ROWS = 4
+THRESHOLD = 0.5
 
 physical_devices = tf.config.list_physical_devices('GPU')
 if len(physical_devices) > 0:
@@ -26,7 +27,7 @@ def process_values(touches, output, output_float):
         output_float[row] = np.delete(output_float[row], 0)
         output_float[row] = np.append(output_float[row], touches[row])
         del output[row][0]
-        if touches[row] > 0.4:
+        if touches[row] > THRESHOLD:
             output[row].append(1)
         else:
             output[row].append(0)

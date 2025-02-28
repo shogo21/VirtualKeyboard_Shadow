@@ -1,6 +1,7 @@
 from threading import Thread
 from logger import logging
 import mediapipe as mp
+import cv2
 
 import time
 
@@ -30,6 +31,7 @@ class HandTracker(Thread):
                 if image is None:
                     time.sleep(0.02)
                 else:
+                    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
                     results = hands.process(image)
 
                     if not results.multi_hand_landmarks:
