@@ -9,7 +9,7 @@ import preprocessing
 import tensorflow as tf
 import numpy as np
 
-WINDOW_SIZE = 1
+WINDOW_SIZE = 3
 NUM_ROWS = 4
 THRESHOLD = 0.5
 
