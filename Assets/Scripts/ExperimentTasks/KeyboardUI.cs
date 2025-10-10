@@ -21,8 +21,8 @@ class KeyState
 public class KeyboardUI : MonoBehaviour, IExperimentUI
 {
     public GameObject keyPrefab;
-
-    private const float MARKER_SIZE = 23;// 実際のマーカーの大きさ[mm]
+    //bigger markersize smaller keyboard
+    private const float MARKER_SIZE = 26;// 実際のマーカーの大きさ[mm]
     private const float KEY_SIZE = 10;// キーの一辺の大きさ[mm]
     private const float KEY_DISTANCE = 13.8f;// キーの中心間の距離[mm]
     private const float DISTANCE_FROM_MARKER = 40;// ARマーカーからキーUIの距離[mm]
@@ -44,12 +44,13 @@ public class KeyboardUI : MonoBehaviour, IExperimentUI
     private string inputted_chars = "";
     //private string incorrect_chars = "";
     private string required_chars = "";
+    //train: 1, test: 2, 4
     private static readonly string[,] phrases_set = {
         {"ABCDEFGHIJKLM","NOPQRSTUVWXYZ","ABCDEFGHIJKLM","NOPQRSTUVWXYZ","ABCDEFGHIJKLM"},
-        {"I CAN RETURN EARLIER","JUST PLAYING WITH YOU","WE WILL KEPP YOU POSTED","ARE YOU BEING A BABY","PLEASE REVISE ACCORDINGLY"},
+        {"I CAN RETURN EARLIER","JUST PLAYING WITH YOU","WE WILL KEEP YOU POSTED","ARE YOU BEING A BABY","PLEASE REVISE ACCORDINGLY"},
         {"I WILL BRING JOHN BRINDLE","YOU CAN TALK TO BECHY","THIS IS VERY SENSITIVE","TRAVIS IS IN CHARGE","WHAT IS UP WITH ENE"}, 
         {"UHN IJKGAMX SZF","PLRC DBW OEYQVT","OP IXTRBKLH AFJ","DQVSG Y EWMNCUZ","NJK YHUSMVD BQE"},
-        {"OJAVLUFRIGHEW","DCMKNTZXSQBYP","LMIRZJCSVFQNU","HGPBTAEODXKWY","ERCPHABTIZLON"},
+        {"OJA VL UFRIGHE WDMKQ","DCMKNT ZXSQ BYPV GUF","LMI RZJ CSV FQNUX YAK","HGPB TAE ODX KWYSMJU","ERC PHA BTIZL OND MVF"},
         {"SLGMQZUWEPIXO","KHDVNBRFYATJC","IATLCQSMJWNPO","YUFDKZBVRGHXE","PCQGUOLFZVBJY"},
     };
     public int phrases_set_index =0;
@@ -229,9 +230,9 @@ public class KeyboardUI : MonoBehaviour, IExperimentUI
         }
         Logger.Logging(new KeyLog('%', this.Space_key.rectTransform, KEY_DISTANCE));
 
-        this.phrase.anchoredPosition = scaled_marker_position + scaled_axis * (-3.5f * KEY_DISTANCE / MARKER_SIZE + DISTANCE_FROM_MARKER / MARKER_SIZE) + downward * -3.5f * KEY_DISTANCE / MARKER_SIZE;
+        this.phrase.anchoredPosition = scaled_marker_position + scaled_axis * (-10.5f * KEY_DISTANCE / MARKER_SIZE + DISTANCE_FROM_MARKER / MARKER_SIZE) + downward * -4.5f * KEY_DISTANCE / MARKER_SIZE;
         this.phrase.localRotation = Quaternion.Euler(0, 0, angle * Mathf.Rad2Deg);
-        this.phrase.localScale = new Vector3(1, 1, 0) * KEY_SIZE / MARKER_SIZE * scaled_axis.magnitude / 40f;
+        this.phrase.localScale = new Vector3(1, 1, 0) * KEY_SIZE / MARKER_SIZE * scaled_axis.magnitude / 25f;
         if (this.phrase_timer > 0f) {
             this.phrase_timer -= Time.deltaTime;
             if (this.phrase_timer < 0f) {
@@ -241,9 +242,9 @@ public class KeyboardUI : MonoBehaviour, IExperimentUI
         }
 
         //this.inputted_phrase.anchoredPosition = scaled_marker_position + scaled_axis * (3.5f * KEY_DISTANCE / MARKER_SIZE + DISTANCE_FROM_MARKER / MARKER_SIZE) + downward * -2f * KEY_DISTANCE / MARKER_SIZE;
-        this.inputted_phrase.anchoredPosition = new Vector2(this.phrase.anchoredPosition.x, this.phrase.anchoredPosition.y) + downward * 1.0f * KEY_DISTANCE / MARKER_SIZE;
+        this.inputted_phrase.anchoredPosition = new Vector2(this.phrase.anchoredPosition.x, this.phrase.anchoredPosition.y) + downward * 1.5f * KEY_DISTANCE / MARKER_SIZE;
         this.inputted_phrase.localRotation = Quaternion.Euler(0, 0, angle * Mathf.Rad2Deg);
-        this.inputted_phrase.localScale = new Vector3(1, 1, 0) * KEY_SIZE / MARKER_SIZE * scaled_axis.magnitude / 40f;
+        this.inputted_phrase.localScale = new Vector3(1, 1, 0) * KEY_SIZE / MARKER_SIZE * scaled_axis.magnitude / 25f;
         if (this.inputted_phrase_timer > 0f)
         {
             this.inputted_phrase_timer -= Time.deltaTime;
