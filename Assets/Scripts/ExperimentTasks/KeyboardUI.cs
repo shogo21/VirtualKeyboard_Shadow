@@ -198,8 +198,8 @@ public class KeyboardUI : MonoBehaviour, IExperimentUI
         Vector2 up_sd_pos = scaled_marker_position + scaled_axis * 4.5f * (DISTANCE_FROM_MARKER / MARKER_SIZE) + downward * -0.5f;
         this.up_SD_key.rectTransform.anchoredPosition = up_sd_pos;
         this.up_SD_key.rectTransform.localRotation = Quaternion.Euler(0, 0, angle * Mathf.Rad2Deg);
-        float up_sd_scale = 1f / MARKER_SIZE * scaled_axis.magnitude / this.up_SD_key.rectTransform.sizeDelta.x;
-        this.up_SD_key.rectTransform.localScale = new Vector3(KEY_DISTANCE * up_sd_scale, 25.5f * up_sd_scale, 0);
+        float up_sd_scale = KEY_SIZE * 1.5f / MARKER_SIZE * scaled_axis.magnitude / this.up_SD_key.rectTransform.sizeDelta.x;
+        this.up_SD_key.rectTransform.localScale = new Vector3(up_sd_scale, up_sd_scale, 0);
         if (this.up_SD_key.timer > 0f)
         {
             this.up_SD_key.timer -= Time.deltaTime;
@@ -209,8 +209,8 @@ public class KeyboardUI : MonoBehaviour, IExperimentUI
         Vector2 enter_pos = scaled_marker_position + scaled_axis * 4.5f * (DISTANCE_FROM_MARKER / MARKER_SIZE) + downward * 0.5f;
         this.Enter_key.rectTransform.anchoredPosition = enter_pos;
         this.Enter_key.rectTransform.localRotation = Quaternion.Euler(0, 0, angle * Mathf.Rad2Deg);
-        float enter_scale = 1f / MARKER_SIZE * scaled_axis.magnitude / this.Enter_key.rectTransform.sizeDelta.x;
-        this.Enter_key.rectTransform.localScale = new Vector3(KEY_DISTANCE * enter_scale, 25.5f * enter_scale, 0);
+        float enter_scale = KEY_SIZE * 1.5f / MARKER_SIZE * scaled_axis.magnitude / this.Enter_key.rectTransform.sizeDelta.x;
+        this.Enter_key.rectTransform.localScale = new Vector3(enter_scale, enter_scale, 0);
         if (this.Enter_key.timer > 0f)
         {
             this.Enter_key.timer -= Time.deltaTime;
@@ -219,11 +219,11 @@ public class KeyboardUI : MonoBehaviour, IExperimentUI
 
         float space_offset_y = KEY_DISTANCE / MARKER_SIZE;
         float space_offset_x = -1.0f * KEY_DISTANCE / MARKER_SIZE;
-        Vector2 space_pos = scaled_marker_position + scaled_axis * (1.0f * KEY_DISTANCE / MARKER_SIZE + space_offset_x + DISTANCE_FROM_MARKER / MARKER_SIZE) + downward * space_offset_y;
+        Vector2 space_pos = scaled_marker_position + scaled_axis * (1.5f * KEY_DISTANCE / MARKER_SIZE + space_offset_x + DISTANCE_FROM_MARKER / MARKER_SIZE) + downward * space_offset_y;
         this.Space_key.rectTransform.anchoredPosition = space_pos;
         this.Space_key.rectTransform.localRotation = Quaternion.Euler(0, 0, angle * Mathf.Rad2Deg);
-        float space_scale = 1f / MARKER_SIZE * scaled_axis.magnitude / this.Space_key.rectTransform.sizeDelta.x;
-        this.Space_key.rectTransform.localScale = new Vector3(2.0f * KEY_DISTANCE * space_scale, 14.5f * space_scale, 0);
+        float space_scale = KEY_SIZE * 1.5f / MARKER_SIZE * scaled_axis.magnitude / this.Space_key.rectTransform.sizeDelta.x;
+        this.Space_key.rectTransform.localScale = new Vector3(space_scale, space_scale, 0);
         if (this.Space_key.timer > 0f)
         {
             this.Space_key.timer -= Time.deltaTime;
