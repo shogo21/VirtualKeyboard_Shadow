@@ -109,7 +109,7 @@ public class KeyboardUI : MonoBehaviour, IExperimentUI
 
         RectTransform space_rt = Instantiate(this.keyPrefab, Vector3.zero, new Quaternion(0, 0, 0, 0), this.transform).GetComponent<RectTransform>();
         space_rt.localPosition = Vector3.zero;
-        space_rt.Find("Char").GetComponent<UnityEngine.UI.Text>().text = "Spa";
+        space_rt.Find("Char").GetComponent<UnityEngine.UI.Text>().text = "Sp";
         space_rt.Find("Char").GetComponent<UnityEngine.UI.Text>().fontSize = 50;
         this.Space_key = new KeyState(space_rt);
 
