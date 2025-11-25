@@ -195,7 +195,7 @@ public class KeyboardUI : MonoBehaviour, IExperimentUI
         }
         Logger.Logging(new KeyLog('#', this.SD_key.rectTransform, KEY_DISTANCE));*/
 
-        Vector2 up_sd_pos = scaled_marker_position + scaled_axis * 4.5f * (DISTANCE_FROM_MARKER / MARKER_SIZE) + downward * -0.5f;
+        Vector2 up_sd_pos = scaled_marker_position + scaled_axis * 4.5f * (DISTANCE_FROM_MARKER / MARKER_SIZE) + downward * -0.4f;
         this.up_SD_key.rectTransform.anchoredPosition = up_sd_pos;
         this.up_SD_key.rectTransform.localRotation = Quaternion.Euler(0, 0, angle * Mathf.Rad2Deg);
         float up_sd_scale = KEY_SIZE * 1.5f / MARKER_SIZE * scaled_axis.magnitude / this.up_SD_key.rectTransform.sizeDelta.x;
@@ -206,7 +206,7 @@ public class KeyboardUI : MonoBehaviour, IExperimentUI
         }
         Logger.Logging(new KeyLog('#', this.up_SD_key.rectTransform, KEY_DISTANCE));
 
-        Vector2 enter_pos = scaled_marker_position + scaled_axis * 4.5f * (DISTANCE_FROM_MARKER / MARKER_SIZE) + downward * 0.5f;
+        Vector2 enter_pos = scaled_marker_position + scaled_axis * 4.5f * (DISTANCE_FROM_MARKER / MARKER_SIZE) + downward * 0.4f;
         this.Enter_key.rectTransform.anchoredPosition = enter_pos;
         this.Enter_key.rectTransform.localRotation = Quaternion.Euler(0, 0, angle * Mathf.Rad2Deg);
         float enter_scale = KEY_SIZE * 1.5f / MARKER_SIZE * scaled_axis.magnitude / this.Enter_key.rectTransform.sizeDelta.x;
