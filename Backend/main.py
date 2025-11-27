@@ -6,6 +6,7 @@ import logger
 from hand_tracker import HandTracker
 from image_sender import ImageSender
 from landmarks_sender import LandmarksSender
+from get_images import MultiImageReceiver
 
 from shareddata import SharedData
 from fisheye_undistort import undistort
@@ -29,9 +30,11 @@ sh_touches = SharedData("touches")
 image_sender = ImageSender(sh_image1, sh_landmarks2)
 landmarks_sender = LandmarksSender(sh_landmarks1)
 touches_sender = TouchesSender(sh_touches)
+multi_image_get = MultiImageReceiver()
 image_sender.start()
 landmarks_sender.start()
 touches_sender.start()
+multi_image_get.start()
 
 tracker = HandTracker(sh_image2, sh_landmarks1, sh_landmarks2, sh_image_and_landmarks)
 detector = TouchDetector(sh_image_and_landmarks, sh_touches)
@@ -73,6 +76,7 @@ except:
 image_sender.stop()
 landmarks_sender.stop()
 touches_sender.stop()
+multi_image_get.stop()
 tracker.stop()
 detector.stop()
 

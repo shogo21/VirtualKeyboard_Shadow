@@ -7,7 +7,8 @@ using UnityEngine.UI;
 using System.Collections.Specialized;
 using static System.Net.Mime.MediaTypeNames;
 
-class KeyState
+//class KeyState
+public class KeyState
 {
     public RectTransform rectTransform;
     public float timer;
@@ -33,8 +34,12 @@ public class KeyboardUI : MonoBehaviour, IExperimentUI
     private ARMarkerDetector detector;
     private RectTransform background_transform;
 
-    private Dictionary<char, KeyState> keys = new Dictionary<char, KeyState>();
-    private KeyState SD_key, up_SD_key, Enter_key, Space_key;
+    //public
+    public Dictionary<char, KeyState> keys = new Dictionary<char, KeyState>();
+    //public
+    public KeyState SD_key, up_SD_key, Enter_key, Space_key;
+
+    private KeyboardImageSender keyboardImageSender;
 
     private char[] hovered_chars = { ' ', ' ', ' ', ' ' };
     private char[] clicked_chars = { ' ', ' ', ' ', ' ' };
@@ -112,6 +117,9 @@ public class KeyboardUI : MonoBehaviour, IExperimentUI
         space_rt.Find("Char").GetComponent<UnityEngine.UI.Text>().text = "Sp";
         space_rt.Find("Char").GetComponent<UnityEngine.UI.Text>().fontSize = 50;
         this.Space_key = new KeyState(space_rt);
+
+        this.keyboardImageSender = new KeyboardImageSender(this.keys.Values, this.up_SD_key, this.Enter_key, this.Space_key, this.keys.Keys);
+        this.keyboardImageSender.Start();
 
 
         this.normal_key_texture = Resources.Load<Texture2D>("Images/black_box");
@@ -260,6 +268,7 @@ public class KeyboardUI : MonoBehaviour, IExperimentUI
         this.warning.localScale = new Vector3(1, 1, 0) * KEY_SIZE / MARKER_SIZE * scaled_axis.magnitude / 40f;
         this.warning.gameObject.SetActive(this.detector.markerTiltWarning || !this.detector.isDetected);
 
+        this.keyboardImageSender.setKeys(this.keys.Values, this.up_SD_key, this.Enter_key, this.Space_key);
         this.UpdateKeyTextures();
     }
 
