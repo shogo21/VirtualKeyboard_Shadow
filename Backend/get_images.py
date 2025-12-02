@@ -1,3 +1,4 @@
+#29枚が一斉に送られてきた際に受け取るコード
 import struct
 import io
 import os
@@ -15,46 +16,58 @@ class MultiImageReceiver(Thread):
         self.pipe = NamedPipeClient("MultiImagePipe")
         #self.pipe.connect()
 
-        self.current_frame = None
-        self.buffer = []  # 29枚たまるまで入れておく
+    def read_exact(self, pipe, size):
+        data = b''
+        while len(data) < size:
+            chunk = pipe.read(size - len(data))
+            if not chunk:
+                return None
+            data += chunk
+        return data
 
-    def read_one_image(self):
-        """Unity から PNG 1枚を受信して Pillow Image を返す"""
 
+    def read_one_frame(self, pipe):
+        #Unity から 1 フレーム分の全キー画像を受信して Pillow Image リストを返す
         # フレーム番号
-        frame_data = self.pipe.read(4)
+        frame_data = self.read_exact(self.pipe, 4)
         if not frame_data:
             return None, None
         frame_num = struct.unpack("<I", frame_data)[0]
 
-        # PNG サイズ
-        size_data = self.pipe.read(4)
-        if not size_data:
-            return None, None
-        size = struct.unpack("<I", size_data)[0]
+        images = []
+        for _ in range(self.images_per_frame):
+            # PNG サイズ
+            size_data = self.read_exact(self.pipe, 4)
+            if not size_data:
+                return None, None
+            size = struct.unpack("<I", size_data)[0]
 
-        # PNG データ
-        png_data = self.pipe.read(size)
-        if not png_data:
-            return None, None
+            # PNG データ
+            png_data = self.read_exact(self.pipe, size)
+            if not png_data:
+                return None, None
+            # Pillow で読み込み
+            try:
+                image = Image.open(io.BytesIO(png_data))
+                images.append(image)
+            except Exception as e:
+                return None, None  # 1枚でも失敗したらフレーム全体を無視
 
-        # Pillow で読み込み
-        image = Image.open(io.BytesIO(png_data))
-        return frame_num, image
+        return frame_num, images
 
     def save_frame_images(self, frame_num, images):
-        """29枚のキー画像を保存する"""
-        save_dir = f"Backend/image_test/frame_{frame_num}"
-        os.makedirs(save_dir, exist_ok=True)
+        #29枚のキー画像を保存する
+        if (frame_num % 100 == 0):
+            save_dir = f"./image_test/frame_{frame_num}"
+            os.makedirs(save_dir, exist_ok=True)
 
-        for i, multi_img in enumerate(images):
-            path = os.path.join(save_dir, f"key_{i:02d}.png")
-            multi_img.save(path)
+            for i, multi_img in enumerate(images):
+                path = os.path.join(save_dir, f"key_{i:02d}.png")
+                multi_img.save(path)
 
-        print(f"Saved frame {frame_num} ({len(images)} images)")
+            print(f"Saved frame {frame_num} ({len(images)} images)")
 
     def run(self):
-
         connected = False
         while not connected:
             try:
@@ -66,38 +79,17 @@ class MultiImageReceiver(Thread):
                     time.sleep(0.1)
                 else:
                     raise
-        """常に受信し続け、29枚たまったら保存"""
+
         print("MultiImage Receiver START.")
- 
+
         while not self.stop_flg:
-            frame_num, multi_img = self.read_one_image()
-            if multi_img is None:
+            frame_num, images = self.read_one_frame(self.pipe)
+            if images is None:
                 continue
 
-            # 最初の画像なら frame_num 記録
-            if self.current_frame is None:
-                self.current_frame = frame_num
+            self.save_frame_images(frame_num, images)
 
-            # フレームが変わった時は、前のバッファを保存してリセット
-            if frame_num != self.current_frame:
-                if len(self.buffer) == self.images_per_frame:
-                    self.save_frame_images(self.current_frame, self.buffer)
-                else:
-                    print(f"Warning: frame {self.current_frame} had only {len(self.buffer)} images")
-
-                # 新しいフレーム開始
-                self.buffer = []
-                self.current_frame = frame_num
-
-            # 画像をバッファに追加
-            self.buffer.append(multi_img)
-
-            # 29枚揃ったら保存
-            if len(self.buffer) == self.images_per_frame:
-                self.save_frame_images(self.current_frame, self.buffer)
-                self.buffer = []  # バッファリセット
         print("MultiImage Receiver STOP")
-
 
     def stop(self):
         self.stop_flg = True

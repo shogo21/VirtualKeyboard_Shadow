@@ -91,6 +91,7 @@ public class NamedPipeServer : IDisposable
         if (this.status == Status.Connected)
         {
             this.writer.Write(bytes, 0, bytes.Length);
+            this.writer.Flush();
         }
         else
         {

@@ -119,6 +119,7 @@ public class KeyboardUI : MonoBehaviour, IExperimentUI
         this.Space_key = new KeyState(space_rt);
 
         this.keyboardImageSender = new KeyboardImageSender(this.keys.Values, this.up_SD_key, this.Enter_key, this.Space_key, this.keys.Keys);
+        //this.keyboardImageSender.firstStart();
         this.keyboardImageSender.Start();
 
 
@@ -269,6 +270,10 @@ public class KeyboardUI : MonoBehaviour, IExperimentUI
         this.warning.gameObject.SetActive(this.detector.markerTiltWarning || !this.detector.isDetected);
 
         this.keyboardImageSender.setKeys(this.keys.Values, this.up_SD_key, this.Enter_key, this.Space_key);
+        if (keyboardImageSender != null)
+        {
+            keyboardImageSender.UpdateOnMainThread();
+        }
         this.UpdateKeyTextures();
     }
 
