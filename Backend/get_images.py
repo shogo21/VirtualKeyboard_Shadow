@@ -14,12 +14,21 @@ class MultiImageReceiver(Thread):
         self.stop_flg = False
         self.images_per_frame = 29
         self.pipe = NamedPipeClient("MultiImagePipe")
-        #self.pipe.connect()
+
+        # Unity 側のキー画像のサイズ（RawTextureData）
+        self.key_width = 64
+        self.key_height = 64
+        self.raw_size = self.key_width * self.key_height * 3  # RGB24 → 3バイト
+
+        # ダミー画像を生成 (64x64 黒)
+        self.dummy_image = Image.new("RGB", (self.key_width, self.key_height), (0, 0, 0))
 
     def read_exact(self, pipe, size):
         data = b''
         while len(data) < size:
+            #print("AAAAAAAA")
             chunk = pipe.read(size - len(data))
+            #print("BBBBBBBBB")
             if not chunk:
                 return None
             data += chunk
@@ -35,29 +44,36 @@ class MultiImageReceiver(Thread):
         frame_num = struct.unpack("<I", frame_data)[0]
 
         images = []
-        for _ in range(self.images_per_frame):
-            # PNG サイズ
+        for i in range(self.images_per_frame):
+            # Raw サイズ
             size_data = self.read_exact(self.pipe, 4)
             if not size_data:
-                return None, None
+                images.append(self.dummy_image.copy())  # サイズ読み込み失敗 → ダミー
+                continue
+            #print(f"size_data: {size_data}")
             size = struct.unpack("<I", size_data)[0]
+            #print(f"size: {size}")
 
-            # PNG データ
-            png_data = self.read_exact(self.pipe, size)
-            if not png_data:
-                return None, None
+            # Raw データ
+            raw_data  = self.read_exact(self.pipe, size)
+            if not raw_data or len(raw_data) != size:
+                images.append(self.dummy_image.copy())
+                continue
             # Pillow で読み込み
             try:
-                image = Image.open(io.BytesIO(png_data))
-                images.append(image)
+                #image = Image.open(io.BytesIO(png_data))
+                #image.load()  # PNG デコード
+                img = Image.frombytes("RGB", (self.key_width, self.key_height), raw_data)
+                images.append(img)
             except Exception as e:
-                return None, None  # 1枚でも失敗したらフレーム全体を無視
+                #print("[decode error]", e)
+                images.append(self.dummy_image.copy())  # 読み込み失敗 → ダミー
 
         return frame_num, images
 
     def save_frame_images(self, frame_num, images):
         #29枚のキー画像を保存する
-        if (frame_num % 100 == 0):
+        if (frame_num % 100 == 0 and frame_num >= 1500):
             save_dir = f"./image_test/frame_{frame_num}"
             os.makedirs(save_dir, exist_ok=True)
 
@@ -85,7 +101,7 @@ class MultiImageReceiver(Thread):
         while not self.stop_flg:
             frame_num, images = self.read_one_frame(self.pipe)
             if images is None:
-                continue
+                continue   # フレーム番号すら読めなかった場合のみスキップ
 
             self.save_frame_images(frame_num, images)
 

@@ -63,4 +63,9 @@ public class CanvasController : MonoBehaviour
         this.imageReceiver.Stop();
         Logger.Output();
     }
+
+    public Texture2D BackgroundTexture()
+    {
+        return this.background;
+    }
 }

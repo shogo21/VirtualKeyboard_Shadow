@@ -150,4 +150,40 @@ public class ARMarkerDetector : MonoBehaviour
         this.markerTiltWarning = false;
     }
 
+    public float GetPxPerCm()
+    {
+        // マーカーが検出されていなければ 0 を返す
+        if (!this.isDetected)
+            return 0f;
+
+        // カメラ画像のピクセル解像度を取得
+        float camW = this.ar_texture.width;
+        float camH = this.ar_texture.height;
+
+        // --- horizontal（右方向） ---
+        Vector2 diffH = this.nextPosition - this.markerPosition;
+        float horizontalPx = Mathf.Sqrt(
+            Mathf.Pow(diffH.x * camW, 2) +
+            Mathf.Pow(diffH.y * camH, 2)
+        );
+
+        // --- vertical（上方向） ---
+        Vector2 diffV = this.abovePosition - this.markerPosition;
+        float verticalPx = Mathf.Sqrt(
+            Mathf.Pow(diffV.x * camW, 2) +
+            Mathf.Pow(diffV.y * camH, 2)
+        );
+
+        // マーカーは正方形なので平均を使う
+        float markerSidePx = (horizontalPx + verticalPx) / 2f;
+
+        // NyIDマーカーの実寸（cm）
+        // addNyIdMarker(1, 80) → 80mm = 8cm
+        float markerSizeCm = 4.0f;
+
+        // px/cm を返す
+        return markerSidePx / markerSizeCm;
+    }
+
+
 }

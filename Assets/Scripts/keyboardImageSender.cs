@@ -9,7 +9,8 @@ using System.Linq;
 
 public class KeyboardImageSender : ThreadRunner
 {
-    public Camera arCamera;
+    public Camera arCamera;               // HMD用カメラ
+    public int targetOutputSize = 64;     // 出力は 64x64 固定
     public RenderTexture rt;
 
     private List<KeyState> allKeys;
@@ -19,8 +20,16 @@ public class KeyboardImageSender : ThreadRunner
     private NamedPipeServer pipe;
     public Texture2D dummyTex;
     public byte[] dummyPngBytes;
+    private CanvasController cc;     // ← キャッシュ
+    private RectTransform backgroundTransform;
+    private ARMarkerDetector detector;    // マーカー情報（px/cm 推定用）
 
     private ConcurrentQueue<Action> mainThreadActions = new ConcurrentQueue<Action>();
+
+    // Reusable buffers（GCを減らすためにこれらを毎フレーム再利用）
+    private Color32[] cameraPixelsCache = null;
+    private int cameraPixelsCacheW = 0;
+    private int cameraPixelsCacheH = 0;
 
     public KeyboardImageSender(
         IEnumerable<KeyState> mainKeys,   // keyboard.keys.Values
@@ -53,7 +62,11 @@ public class KeyboardImageSender : ThreadRunner
         this.dummyTex.Apply();
 
         // ここで PNG に変換して保持
-        this.dummyPngBytes = this.dummyTex.EncodeToPNG();
+        //this.dummyPngBytes = this.dummyTex.EncodeToPNG();
+
+        this.cc = UnityEngine.Object.FindObjectOfType<CanvasController>();  // ← Startで1回だけ取得
+        this.detector = UnityEngine.Object.FindObjectOfType<ARMarkerDetector>();
+        this.backgroundTransform =GameObject.Find("Canvas/Background").GetComponent<RectTransform>();
     }
 
     public void setKeys(IEnumerable<KeyState> mainKeys,   // keyboard.keys.Values
@@ -71,25 +84,6 @@ public class KeyboardImageSender : ThreadRunner
         this.allKeys.Add(enterKey);       // Enter
         this.allKeys.Add(spaceKey);       // Space
     }
-
-    // 64×64 黒画像を1回だけ生成して再利用
-    /*private void CreateDummyTexture()
-    {
-        this.dummyTex = new Texture2D(64, 64, TextureFormat.RGB24, false);
-        Color[] pixels = new Color[64 * 64];
-        for (int i = 0; i < pixels.Length; i++) pixels[i] = Color.black;
-        this.dummyTex.SetPixels(pixels);
-        this.dummyTex.Apply();
-
-        // ここで PNG に変換して保持
-        this.dummyPngBytes = this.dummyTex.EncodeToPNG();
-    }
-
-    public void firstStart()
-    {
-        CreateDummyTexture();
-    }*/
-
 
     protected override void Run()
     {
@@ -148,6 +142,7 @@ public class KeyboardImageSender : ThreadRunner
         {
             Console.WriteLine("[Capture] Pipe connected.");
         }
+
         try
         {
             using (MemoryStream ms = new MemoryStream())
@@ -159,28 +154,32 @@ public class KeyboardImageSender : ThreadRunner
                 foreach (var pair in allKeys.Zip(keyChars, (ks, kc) => new { ks, kc }))
                 {
                     Texture2D tex = CaptureKey(pair.ks);
-                    //Texture2D texToSend = tex != null ? tex : dummyTex;
-                    byte[] pngBytes = tex != null ? tex.EncodeToPNG() : this.dummyPngBytes;
 
-                    /*if (tex == null)
+                    byte[] rawBytes;
+
+                    if (tex != null)
                     {
-                        tex = new Texture2D(64, 64, TextureFormat.RGB24, false);
-                        Color[] pixels = new Color[64 * 64];
-                        for (int i = 0; i < pixels.Length; i++) pixels[i] = Color.black;
-                        tex.SetPixels(pixels);
-                        tex.Apply();
-                    }*/
+                        // PNGより圧倒的に軽い RawTextureData を取得
+                        rawBytes = tex.GetRawTextureData();
+                    }
+                    else
+                    {
+                        // dummy も PNG ではなく Raw で作る方がよいが、現状はこれでOK
+                        rawBytes = dummyTex.GetRawTextureData();
+                    }
 
-                    //byte[] pngBytes = tex.EncodeToPNG();
+                    // --- サイズを書き込む（これがあるとPythonで復元可能） ---
+                    ms.Write(BitConverter.GetBytes(rawBytes.Length), 0, 4);
 
-                    ms.Write(BitConverter.GetBytes(pngBytes.Length), 0, 4);
-                    ms.Write(pngBytes, 0, pngBytes.Length);
+                    // --- Rawデータ本体 ---
+                    ms.Write(rawBytes, 0, rawBytes.Length);
 
-                    // キャプチャしたテクスチャは破棄（dummyTex は破棄しない）
+                    // 不要テクスチャを破棄
                     if (tex != null && tex != dummyTex)
                     {
                         UnityEngine.Object.Destroy(tex);
                     }
+
                 }
                 byte[] frameBytes = ms.ToArray();
                 pipe.Write(frameBytes);
@@ -197,58 +196,51 @@ public class KeyboardImageSender : ThreadRunner
 
     private Texture2D CaptureKey(KeyState ks)
     {
+        Texture2D background = this.cc.BackgroundTexture(); // HMDに映っている最終画像
+
+        if (background == null)
+        {
+            Console.WriteLine("BackgroundTexture is null.");
+            return null;
+        }
+        else
+        {
+            Console.WriteLine("BackgroundTexture is not null.");
+        }
 
         Vector3[] corners = new Vector3[4];
         ks.rectTransform.GetWorldCorners(corners);
         Vector2 min = RectTransformUtility.WorldToScreenPoint(arCamera, corners[0]);
         Vector2 max = RectTransformUtility.WorldToScreenPoint(arCamera, corners[2]);
 
-        min.x = Mathf.Clamp(min.x, 0, Screen.width - 1);
-        min.y = Mathf.Clamp(min.y, 0, Screen.height - 1);
-        max.x = Mathf.Clamp(max.x, 0, Screen.width - 1);
-        max.y = Mathf.Clamp(max.y, 0, Screen.height - 1);
-
+        
         int width = Mathf.CeilToInt(max.x - min.x);
         int height = Mathf.CeilToInt(max.y - min.y);
-        /*Vector2[] scr = new Vector2[4];
-        for (int i = 0; i < 4; i++)
+
+        // ---- 安全な座標・サイズに補正する ----
+        int x = Mathf.Clamp((int)min.x, 0, background.width - 1);
+        int y = Mathf.Clamp((int)min.y, 0, background.height - 1);
+
+        int w = Mathf.Clamp(width, 1, background.width - x);
+        int h = Mathf.Clamp(height, 1, background.height - y);
+
+        if (w <= 1 || h <= 1)
         {
-            scr[i] = RectTransformUtility.WorldToScreenPoint(arCamera, corners[i]);
+            return this.dummyTex;
         }
 
-        float minXf = scr.Min(p => p.x);
-        float maxXf = scr.Max(p => p.x);
-        float minYf = scr.Min(p => p.y);
-        float maxYf = scr.Max(p => p.y);
+        // ---- 背景 Texture2D から切り抜く ----
+        Texture2D tex = new Texture2D(w, h, TextureFormat.RGB24, false);
 
-        // 2) Clamp to screen bounds (use inclusive 0 .. Screen.width/height)
-        int minX = Mathf.Clamp(Mathf.FloorToInt(minXf), 0, Screen.width - 1);
-        int minY = Mathf.Clamp(Mathf.FloorToInt(minYf), 0, Screen.height - 1);
-        int maxX = Mathf.Clamp(Mathf.CeilToInt(maxXf), 0, Screen.width - 1);
-        int maxY = Mathf.Clamp(Mathf.CeilToInt(maxYf), 0, Screen.height - 1);
-
-        int width = maxX - minX;
-        int height = maxY - minY;*/
-        if (width <= 1 || height <= 1) return null;
-
-        RenderTexture.active = rt;
-        Texture2D tex = new Texture2D(width, height, TextureFormat.RGB24, false);
-        tex.ReadPixels(new Rect(min.x, min.y, width, height), 0, 0);
+        Color[] pixels = background.GetPixels(x, y, w, h);
+        tex.SetPixels(pixels);
         tex.Apply();
-        RenderTexture.active = null;
-
-        float angle = ks.rectTransform.localRotation.eulerAngles.z;
-        Texture2D normalized = RotateTexture(tex, -angle);
-        UnityEngine.Object.Destroy(tex);
-        Texture2D resized = ResizeTexture(normalized, 64, 64);
-
-        // normalized も不要なので破棄
-        UnityEngine.Object.Destroy(normalized);
 
         // resized を返す
-        return resized;
+        return tex;
     }
 
+    /*いらない
     private Texture2D ResizeTexture(Texture2D src, int targetW, int targetH)
     {
         var rt = RenderTexture.GetTemporary(targetW, targetH, 0, RenderTextureFormat.ARGB32);
@@ -298,5 +290,5 @@ public class KeyboardImageSender : ThreadRunner
         rotated.SetPixels32(dst);
         rotated.Apply();
         return rotated;
-    }
+    }*/
 }
