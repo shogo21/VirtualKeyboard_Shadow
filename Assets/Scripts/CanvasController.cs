@@ -36,11 +36,14 @@ public class CanvasController : MonoBehaviour
 
     void Update()
     {
+        UnityLogger.Log("Canvas_Update");
         if (this.sh_background.TryGet(out this.colors))
         {
             this.background.SetPixels32(this.colors);
             this.background.Apply();
             this.detector.TextureUpdated();
+            UnityLogger.Log("Recv pixel count = " + this.colors.Length);
+            UnityLogger.Log("First pixel = " + this.colors[0]);
         }
         if (this.sh_foreground.TryGet(out this.colors))
         {

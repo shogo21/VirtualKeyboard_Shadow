@@ -11,7 +11,7 @@ public class KeyboardImageSender : ThreadRunner
 {
     public Camera arCamera;               // HMD用カメラ
     public int targetOutputSize = 64;     // 出力は 64x64 固定
-    public RenderTexture rt;
+    //public RenderTexture rt;
 
     private List<KeyState> allKeys;
     private List<char> keyChars;
@@ -21,6 +21,7 @@ public class KeyboardImageSender : ThreadRunner
     public Texture2D dummyTex;
     private CanvasController cc;     // ← キャッシュ
     private ARMarkerDetector detector;    // マーカー情報（px/cm 推定用）
+    private Texture2D background = null;
 
     private ConcurrentQueue<Action> mainThreadActions = new ConcurrentQueue<Action>();
 
@@ -143,7 +144,7 @@ public class KeyboardImageSender : ThreadRunner
         }
 
         // 1) 背景（カメラ）テクスチャを取得して Color32[] に
-        Texture2D background = null;
+        
         try
         {
             background = this.cc.BackgroundTexture(); // 既存 API と一致させています
@@ -157,12 +158,16 @@ public class KeyboardImageSender : ThreadRunner
         {
             UnityLogger.Log("[Capture] BackgroundTexture is null -> send dummies");
             // 全部ダミーを 29 枚送る
-            SendFrameAsDummies();
+            //SendFrameAsDummies();
             return;
+        }
+        else
+        {
+            UnityLogger.Log("[Capture] BackgroundTexture is not null");
         }
 
         // 背景ピクセルをキャッシュ（毎フレーム更新）
-        EnsureCameraPixelCache(background);
+        /*EnsureCameraPixelCache(background);
 
         // px_per_cm を推定（ARMarkerDetector から取れるなら使う）
         float pxPerCm = this.detector.GetPxPerCm();
@@ -223,9 +228,9 @@ public class KeyboardImageSender : ThreadRunner
             byte[] frameBytes = ms.ToArray();
             pipe.Write(frameBytes);
         }
-    }
+    }*/
 
-        /*try
+        try
         {
             using (MemoryStream ms = new MemoryStream())
             {
@@ -274,10 +279,10 @@ public class KeyboardImageSender : ThreadRunner
         {
             Console.WriteLine("[Capture] Exception: " + ex.Message);
         }
-    }*/
+    }
 
     
-    private void SendFrameAsDummies()
+    /*private void SendFrameAsDummies()
     {
         using (MemoryStream ms = new MemoryStream())
         {
@@ -309,6 +314,7 @@ public class KeyboardImageSender : ThreadRunner
         // GetPixels32 はメインスレッド呼び出し必須です
         Color32[] tmp = background.GetPixels32();
         // コピー（GetPixels32 は新配列を返すため、参照を使っても良いが安全のためコピー）
+        UnityLogger.Log("GetPixels32" + tmp);
         Array.Copy(tmp, cameraPixelsCache, tmp.Length);
     }
     
@@ -415,9 +421,9 @@ public class KeyboardImageSender : ThreadRunner
         Color32[] d = new Color32[targetOutputSize * targetOutputSize];
         for (int i = 0; i < d.Length; i++) d[i] = new Color32(0, 0, 0, 255);
         return Color32ArrayToRawRGB(d, targetOutputSize, targetOutputSize);
-    }
+    }*/
 
-    /*private Texture2D CaptureKey(KeyState ks)
+    private Texture2D CaptureKey(KeyState ks)
     {
         Texture2D background = this.cc.BackgroundTexture(); // HMDに映っている最終画像
 
@@ -461,7 +467,7 @@ public class KeyboardImageSender : ThreadRunner
 
         // resized を返す
         return tex;
-    }*/
+    }
 
     /*いらない
     private Texture2D ResizeTexture(Texture2D src, int targetW, int targetH)

@@ -19,12 +19,14 @@ public class ImageReceiver : ThreadRunner
             var _ = pipe.WakeUp();
             while (true)
             {
+                //UnityLogger.Log("Receiver loop started");
                 try
                 {
                     if (this.token.IsCancellationRequested) break;
                     if (pipe.status == NamedPipeServer.Status.Connected)
                     {
                         byte[] bytes = pipe.Read(640 * 480 * 4);
+                        //UnityLogger.Log("bytes"+bytes);
                         if (bytes == null) break;
                         this.sh_background.Set(BytesToColorsNotMasked(bytes));
                         this.sh_foreground.Set(BytesToColors(bytes));
