@@ -36,7 +36,6 @@ public class CanvasController : MonoBehaviour
 
     void Update()
     {
-        UnityLogger.Log("Canvas_Update");
         if (this.sh_background.TryGet(out this.colors))
         {
             this.background.SetPixels32(this.colors);
@@ -67,7 +66,7 @@ public class CanvasController : MonoBehaviour
         Logger.Output();
     }
 
-    public Texture2D BackgroundTexture()
+    public Texture2D GetBackgroundTexture()
     {
         return this.background;
     }

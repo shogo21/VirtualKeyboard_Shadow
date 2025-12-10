@@ -26,9 +26,9 @@ class MultiImageReceiver(Thread):
     def read_exact(self, pipe, size):
         data = b''
         while len(data) < size:
-            #print("AAAAAAAA")
+            print("AAAAAAAA")
             chunk = pipe.read(size - len(data))
-            #print("BBBBBBBBB")
+            print("BBBBBBBBB")
             if not chunk:
                 return None
             data += chunk
@@ -42,7 +42,7 @@ class MultiImageReceiver(Thread):
         if not frame_data:
             return None, None
         frame_num = struct.unpack("<I", frame_data)[0]
-        #print("frame_data get")
+        print("frame_data get")
 
         images = []
         for i in range(self.images_per_frame):
@@ -54,12 +54,16 @@ class MultiImageReceiver(Thread):
             #print(f"size_data: {size_data}")
             size = struct.unpack("<I", size_data)[0]
             #print(f"size: {size}")
+            if size == 0:
+                # データなし → ダミー画像
+                images.append(self.dummy_image.copy())
+                continue
 
             # Raw データ
             raw_data  = self.read_exact(self.pipe, size)
             if not raw_data or len(raw_data) != size:
                 images.append(self.dummy_image.copy())
-                #print("Raw data is null")
+                print("Raw data is null")
                 continue
             # Pillow で読み込み
             try:
@@ -67,9 +71,9 @@ class MultiImageReceiver(Thread):
                 #image.load()  # PNG デコード
                 img = Image.frombytes("RGB", (self.key_width, self.key_height), raw_data)
                 images.append(img)
-                #print("img append success")
+                print("img append success")
             except Exception as e:
-                #print("[decode error]", e)
+                print("[decode error]", e)
                 images.append(self.dummy_image.copy())  # 読み込み失敗 → ダミー
 
         return frame_num, images
