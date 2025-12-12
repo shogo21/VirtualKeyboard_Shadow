@@ -46,7 +46,7 @@ public class KeyboardImageSender : ThreadRunner
             if (pipe.status == NamedPipeServer.Status.Connected)
             {
                 frameCounter++;
-                TrySendFrame();
+                //TrySendFrame();
             }
             Thread.Sleep(10);
         }
@@ -54,7 +54,7 @@ public class KeyboardImageSender : ThreadRunner
 
     public void TrySendFrame()
     {
-        if (!framesQueue.TryDequeue(out var cropsBytes))
+        if (!framesQueue.TryDequeue(out var cropsBytes_local))
         {
             UnityLogger.Log("KeyboardImageSender don't get crop_image.");
             return; // フレームが来てない
@@ -81,7 +81,7 @@ public class KeyboardImageSender : ThreadRunner
                 ms.Write(BitConverter.GetBytes(frameCounter), 0, 4);
 
                 // 29 枚送信
-                foreach (var bytes in cropsBytes)
+                foreach (var bytes in cropsBytes_local)
                 {
                     if (bytes == null)
                     {
@@ -108,8 +108,8 @@ public class KeyboardImageSender : ThreadRunner
         }
 
         // ---- フレーム内のバッファをクリア（メモリ解放）----
-        for (int i = 0; i < cropsBytes.Count; i++)
-            cropsBytes[i] = null;
-        cropsBytes.Clear();
+        for (int i = 0; i < cropsBytes_local.Count; i++)
+            cropsBytes_local[i] = null;
+        cropsBytes_local.Clear();
     }
 }

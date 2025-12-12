@@ -92,3 +92,6 @@ buttontest_sekiya10mm/
 buttontest_sekiya15mm/
 keyboardtest_sekiya/
 test/
+
+#images_test
+Backend/image_test/

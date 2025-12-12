@@ -43,11 +43,12 @@ public class KeyboardUI : MonoBehaviour, IExperimentUI
     private RenderTexture[] crops = new RenderTexture[29];
     private Texture2D[] readTex = new Texture2D[29];
     private CanvasController cc;     // ← キャッシュ
+    public byte[] raw;
 
     private Vector2[] keyCenters = new Vector2[29];
     private Vector4[] uvRects = new Vector4[29];
 
-    private List<byte[]> cropsBytes;
+    private List<byte[]> cropsBytes = new List<byte[]>();
 
     //public
     public Dictionary<char, KeyState> keys = new Dictionary<char, KeyState>();
@@ -353,19 +354,28 @@ public class KeyboardUI : MonoBehaviour, IExperimentUI
                 this.readTex[i].ReadPixels(new Rect(0, 0, this.cropW, this.cropH), 0, 0);
                 this.readTex[i].Apply();
                 UnityLogger.Log("crop changes from Render to Texture");
-
-                byte[] raw = this.readTex[i].GetRawTextureData();
-                if (raw == null)
+                try
+                {
+                    this.raw = this.readTex[i].GetRawTextureData();
+                    UnityLogger.Log("raw can read");
+                    UnityLogger.Log("raw length: " + this.raw.Length);
+                }
+                catch
+                {
+                    UnityLogger.Log("raw can not read");
+                }
+                if (this.raw == null)
                 {
                     UnityLogger.Log("raw is null");
                 }
-                this.cropsBytes.Add(raw);
+                this.cropsBytes.Add(this.raw);
                 UnityLogger.Log("raw add success");
             }
             RenderTexture.active = null;
             UnityLogger.Log("[Crop] generation success.");
         }
         this.keyboardImageSender.EnqueueFrame(this.cropsBytes);
+        this.keyboardImageSender.TrySendFrame();
         this.cropsBytes.Clear();
 
         this.UpdateKeyTextures();

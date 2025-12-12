@@ -26,9 +26,7 @@ class MultiImageReceiver(Thread):
     def read_exact(self, pipe, size):
         data = b''
         while len(data) < size:
-            print("AAAAAAAA")
             chunk = pipe.read(size - len(data))
-            print("BBBBBBBBB")
             if not chunk:
                 return None
             data += chunk
@@ -42,7 +40,6 @@ class MultiImageReceiver(Thread):
         if not frame_data:
             return None, None
         frame_num = struct.unpack("<I", frame_data)[0]
-        print("frame_data get")
 
         images = []
         for i in range(self.images_per_frame):
@@ -51,9 +48,7 @@ class MultiImageReceiver(Thread):
             if not size_data:
                 images.append(self.dummy_image.copy())  # サイズ読み込み失敗 → ダミー
                 continue
-            #print(f"size_data: {size_data}")
             size = struct.unpack("<I", size_data)[0]
-            #print(f"size: {size}")
             if size == 0:
                 # データなし → ダミー画像
                 images.append(self.dummy_image.copy())
@@ -63,32 +58,27 @@ class MultiImageReceiver(Thread):
             raw_data  = self.read_exact(self.pipe, size)
             if not raw_data or len(raw_data) != size:
                 images.append(self.dummy_image.copy())
-                print("Raw data is null")
                 continue
             # Pillow で読み込み
             try:
-                #image = Image.open(io.BytesIO(png_data))
-                #image.load()  # PNG デコード
                 img = Image.frombytes("RGB", (self.key_width, self.key_height), raw_data)
                 images.append(img)
-                print("img append success")
             except Exception as e:
-                print("[decode error]", e)
                 images.append(self.dummy_image.copy())  # 読み込み失敗 → ダミー
 
         return frame_num, images
 
     def save_frame_images(self, frame_num, images):
         #29枚のキー画像を保存する
-        if (frame_num % 100 == 0 and frame_num >= 1500):
-            save_dir = f"./image_test/frame_{frame_num}"
-            os.makedirs(save_dir, exist_ok=True)
+        #if (frame_num % 10 == 0 and frame_num >= 150):
+        save_dir = f"./image_test/frame_{frame_num}"
+        os.makedirs(save_dir, exist_ok=True)
 
-            for i, multi_img in enumerate(images):
-                path = os.path.join(save_dir, f"key_{i:02d}.png")
-                multi_img.save(path)
+        for i, multi_img in enumerate(images):
+            path = os.path.join(save_dir, f"key_{i:02d}.png")
+            multi_img.save(path)
 
-            print(f"Saved frame {frame_num} ({len(images)} images)")
+        print(f"Saved frame {frame_num} ({len(images)} images)")
 
     def run(self):
         connected = False
@@ -109,7 +99,6 @@ class MultiImageReceiver(Thread):
             frame_num, images = self.read_one_frame(self.pipe)
             if images is None:
                 continue   # フレーム番号すら読めなかった場合のみスキップ
-
             self.save_frame_images(frame_num, images)
 
         print("MultiImage Receiver STOP")
