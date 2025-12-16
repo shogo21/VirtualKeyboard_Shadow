@@ -8,6 +8,8 @@ from PIL import Image
 from namedpipe import NamedPipeClient
 from threading import Thread
 
+MAGIC = b'KSF1'
+
 class MultiImageReceiver(Thread):
     def __init__(self):
         super(MultiImageReceiver, self).__init__()
@@ -32,26 +34,103 @@ class MultiImageReceiver(Thread):
             data += chunk
         return data
 
+    def read_until_magic(self, pipe):   
+        buf = b''
+        while True:
+            b = pipe.read(1)
+            if not b:
+                return False
+            buf += b   
+            if len(buf) > 4:
+                buf = buf[-4:]
+            if buf == MAGIC:
+                return True
 
     def read_one_frame(self, pipe):
         #Unity から 1 フレーム分の全キー画像を受信して Pillow Image リストを返す
+        ok = self.read_until_magic(pipe)
+        if not ok:
+            return None, None
+
+        # ---- FRAME_SIZE ----
+        size_bytes = self.read_exact(pipe, 4)
+        if not size_bytes:
+            return None, None
+        frame_size = struct.unpack("<I", size_bytes)[0]
+
+        # ---- PAYLOAD ----
+        payload = self.read_exact(pipe, frame_size)
+        if not payload or len(payload) != frame_size:
+            return None, None
+
+        offset = 0
+
         # フレーム番号
-        frame_data = self.read_exact(self.pipe, 4)
+        """frame_data = self.read_exact(self.pipe, 4)
         if not frame_data:
             return None, None
         frame_num = struct.unpack("<I", frame_data)[0]
 
+        # ---- ③ 画像枚数 ----
+        count_data = self.read_exact(pipe, 4)
+        if not count_data:
+            return None, None
+        image_count = struct.unpack("<I", count_data)[0]"""
+        #print(f"image_count: {image_count}")
+
+        # Frame ID
+        frame_id = struct.unpack_from("<I", payload, offset)[0]
+        offset += 4
+
+        # Image count
+        image_count = struct.unpack_from("<I", payload, offset)[0]
+        offset += 4
+        print(f"image_count: {image_count}")
+
         images = []
-        for i in range(self.images_per_frame):
+        for _ in range(image_count):
+            size = struct.unpack_from("<I", payload, offset)[0]
+            offset += 4
+
+            if size <= 0 or size != self.raw_size:
+                images.append(self.dummy_image.copy())
+                offset += max(size, 0)
+                continue
+
+            raw = payload[offset:offset + size]
+            offset += size
+
+            try:
+                img = Image.frombytes("RGB", (self.key_width, self.key_height), raw)
+                images.append(img)
+            except Exception:
+                images.append(self.dummy_image.copy())
+
+        return frame_id, images
+
+        """for i in range(image_count):
             # Raw サイズ
             size_data = self.read_exact(self.pipe, 4)
             if not size_data:
                 images.append(self.dummy_image.copy())  # サイズ読み込み失敗 → ダミー
+                print(f"size is not")
                 continue
             size = struct.unpack("<I", size_data)[0]
+            print(f"size: {size}")
+
+            if size <= 0 or size != self.raw_size:
+                # サイズ不正 → ダミー
+                images.append(self.dummy_image.copy())
+                # サイズ分だけ読み飛ばす（再同期を壊さない）
+                if size > 0:
+                    self.read_exact(pipe, size)
+                continue
+
+            #このif文コメントアウト
             if size == 0:
                 # データなし → ダミー画像
                 images.append(self.dummy_image.copy())
+                print("dummy append")
                 continue
 
             # Raw データ
@@ -64,19 +143,24 @@ class MultiImageReceiver(Thread):
                 img = Image.frombytes("RGB", (self.key_width, self.key_height), raw_data)
                 images.append(img)
             except Exception as e:
-                images.append(self.dummy_image.copy())  # 読み込み失敗 → ダミー
+                images.append(self.dummy_image.copy())"""  # 読み込み失敗 → ダミー
 
-        return frame_num, images
+        """if (self.images_per_frame > image_count):
+            for _ in range(self.images_per_frame-image_count):
+                images.append(self.dummy_image.copy())"""
+
+
+        #return frame_id, images
 
     def save_frame_images(self, frame_num, images):
         #29枚のキー画像を保存する
-        #if (frame_num % 10 == 0 and frame_num >= 150):
-        save_dir = f"./image_test/frame_{frame_num}"
-        os.makedirs(save_dir, exist_ok=True)
+        #if (frame_num % 100 == 0 and frame_num >= 1000):
+            #save_dir = f"./image_test/frame_{frame_num}"
+            #os.makedirs(save_dir, exist_ok=True)
 
-        for i, multi_img in enumerate(images):
-            path = os.path.join(save_dir, f"key_{i:02d}.png")
-            multi_img.save(path)
+            #for i, multi_img in enumerate(images):
+                #path = os.path.join(save_dir, f"key_{i:02d}.png")
+                #multi_img.save(path)
 
         print(f"Saved frame {frame_num} ({len(images)} images)")
 

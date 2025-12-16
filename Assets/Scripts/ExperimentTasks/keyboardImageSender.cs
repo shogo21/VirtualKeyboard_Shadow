@@ -11,8 +11,10 @@ public class KeyboardImageSender : ThreadRunner
     private NamedPipeServer pipe;
 
     private ConcurrentQueue<List<byte[]>> framesQueue = new ConcurrentQueue<List<byte[]>>();
+    private List<byte[]> latestFrame = new List<byte[]>();
+    private int frameCounter = 0;
+    private readonly object sendLock = new object();
 
-    private int frameCounter;
 
     public KeyboardImageSender(string pipeName = "MultiImagePipe")
     {
@@ -22,7 +24,8 @@ public class KeyboardImageSender : ThreadRunner
     public void EnqueueFrame(List<byte[]> cropsBytes)
     {
         // 受け取ったフレームをキューに積む（スレッド安全）
-        this.framesQueue.Enqueue(cropsBytes);
+        //this.framesQueue.Enqueue(cropsBytes);
+        this.latestFrame = cropsBytes; // 上書き
     }
 
     protected override void Run()
@@ -33,83 +36,122 @@ public class KeyboardImageSender : ThreadRunner
         }
         catch (Exception e)
         {
-            UnityLogger.Log("Pipe WakeUp failed: " + e.Message);
+            //UnityLogger.Log("Pipe WakeUp failed: " + e.Message);
             return;
         }
-
-        frameCounter = 0;
-
         while (true)
         {
             if (token.IsCancellationRequested) break;
 
+            /*if (pipe.status != NamedPipeServer.Status.Connected)
+            {
+                Thread.Sleep(10);
+                continue;
+            }*/
             if (pipe.status == NamedPipeServer.Status.Connected)
             {
-                frameCounter++;
-                //TrySendFrame();
+                // ---- 最新フレームを取得（差し替え式）----
+                var frame = this.latestFrame;
+                if (frame == null)
+                {
+                    Thread.Sleep(10);
+                    //UnityLogger.Log("KeyboardImageSender don't get crop_image.");
+                    frameCounter++;
+                    continue;
+                }
+                else
+                {
+                    //UnityLogger.Log("KeyboardImageSender get crop_image.");
+                    TrySendFrame(frame, frameCounter);
+                    this.latestFrame.Clear();
+                    //this.latestFrame = null; // 送信中に書き換えられない
+                    frameCounter++;
+                }
             }
-            Thread.Sleep(10);
         }
     }
 
-    public void TrySendFrame()
+    public void TrySendFrame(List<byte[]> frameImages, int frameId)
     {
-        if (!framesQueue.TryDequeue(out var cropsBytes_local))
+        // ---- 二重送信・割り込み防止 ----
+        lock (sendLock)
         {
-            UnityLogger.Log("KeyboardImageSender don't get crop_image.");
-            return; // フレームが来てない
-        }
-        else
-        {
-            UnityLogger.Log("KeyboardImageSender get crop_image.");
-        }
-
-        if (pipe == null || pipe.status != NamedPipeServer.Status.Connected)
-        {
-            UnityLogger.Log("[Capture] Pipe not connected.");
-            return;
-        }else
-        {
-            UnityLogger.Log("[Capture] Pipe connected.");
-        }
-
-        try
-        {
-            using (MemoryStream ms = new MemoryStream())
+            try
             {
-                // 1フレーム番号を書き込む
-                ms.Write(BitConverter.GetBytes(frameCounter), 0, 4);
-
-                // 29 枚送信
-                foreach (var bytes in cropsBytes_local)
+                /*using (MemoryStream ms = new MemoryStream())
                 {
-                    if (bytes == null)
+                    // ---- ① MAGIC ----
+                    ms.Write(BitConverter.GetBytes(0x3146534B), 0, 4); // "KSF1"
+
+                    // ---- ② Frame ID ----
+                    ms.Write(BitConverter.GetBytes(frameId), 0, 4);
+
+                    // ---- ③ 枚数 ----
+                    ms.Write(BitConverter.GetBytes(frameImages.Count), 0, 4);
+
+                    // ---- ④ 各画像 ----
+                    foreach (var img in frameImages)
                     {
-                        // 安全のため 0 サイズを送る
-                        ms.Write(BitConverter.GetBytes(0), 0, 4);
-                        continue;
+                        if (img == null)
+                        {
+                            ms.Write(BitConverter.GetBytes(0), 0, 4);
+                            continue;
+                        }
+
+                        ms.Write(BitConverter.GetBytes(img.Length), 0, 4);
+                        ms.Write(img, 0, img.Length);
                     }
 
-                    // サイズ
-                    ms.Write(BitConverter.GetBytes(bytes.Length), 0, 4);
+                    // ---- ⑤ 一気に送信（超重要） ----
+                    byte[] packet = ms.ToArray();
+                    pipe.Write(packet);
+                    //UnityLogger.Log("Send to Python from Unity is success");
+                }*/
+                using (MemoryStream payload = new MemoryStream())
+                {
+                    // ---------- payload（FRAME_SIZE 対象） ----------
+                    // Frame ID
+                    payload.Write(BitConverter.GetBytes(frameId), 0, 4);
 
-                    // 本体
-                    ms.Write(bytes, 0, bytes.Length);
+                    // Image count
+                    payload.Write(BitConverter.GetBytes(frameImages.Count), 0, 4);
+
+                    // Images
+                    foreach (var img in frameImages)
+                    {
+                        if (img == null)
+                        {
+                            payload.Write(BitConverter.GetBytes(0), 0, 4);
+                            continue;
+                        }
+
+                        payload.Write(BitConverter.GetBytes(img.Length), 0, 4);
+                        payload.Write(img, 0, img.Length);
+                    }
+
+                    byte[] payloadBytes = payload.ToArray();
+
+                    // ---------- packet ----------
+                    using (MemoryStream packet = new MemoryStream())
+                    {
+                        // MAGIC
+                        packet.Write(BitConverter.GetBytes(0x3146534B), 0, 4);
+
+                        // FRAME_SIZE
+                        packet.Write(BitConverter.GetBytes(payloadBytes.Length), 0, 4);
+
+                        // payload 本体
+                        packet.Write(payloadBytes, 0, payloadBytes.Length);
+
+                        // ★ 一気に送信（超重要）
+                        pipe.Write(packet.ToArray());
+                    }
                 }
-
-                byte[] packet = ms.ToArray();
-                pipe.Write(packet);
-                UnityLogger.Log("Send to Python from Unity is success");
+            }
+            catch (Exception e)
+            {
+                //UnityLogger.Log("[SendOneFrame] ERROR: " + e.Message);
             }
         }
-        catch (Exception ex)
-        {
-            Console.WriteLine("[Capture] Exception: " + ex.Message);
-        }
-
-        // ---- フレーム内のバッファをクリア（メモリ解放）----
-        for (int i = 0; i < cropsBytes_local.Count; i++)
-            cropsBytes_local[i] = null;
-        cropsBytes_local.Clear();
     }
 }

@@ -34,11 +34,11 @@ public class KeyboardUI : MonoBehaviour, IExperimentUI
     private ARMarkerDetector detector;
     private RectTransform background_transform;
 
-    public Shader cropShader;
+    public Shader rotateShader, cropShader;
     public int numCrops = 29;
     public int cropW = 64;
     public int cropH = 64;
-    private Material cropMaterial;
+    private Material cropMaterial, rotateMaterial;
     private RenderTexture rtSource;  // Pythonからの元画像を入れる
     private RenderTexture[] crops = new RenderTexture[29];
     private Texture2D[] readTex = new Texture2D[29];
@@ -47,6 +47,9 @@ public class KeyboardUI : MonoBehaviour, IExperimentUI
 
     private Vector2[] keyCenters = new Vector2[29];
     private Vector4[] uvRects = new Vector4[29];
+    private Vector2 imageCenterPx = new Vector2(640f * 0.5f, 480f * 0.5f);
+    private Vector2 rotatedKeyCenterPx;
+    private float cropSizePx;
 
     private List<byte[]> cropsBytes = new List<byte[]>();
 
@@ -88,7 +91,6 @@ public class KeyboardUI : MonoBehaviour, IExperimentUI
     public bool forceStop = false;
     public bool skipChar = false;
 
-
     void Start()
     {
         this.rect_transform = this.GetComponent<RectTransform>();
@@ -110,11 +112,6 @@ public class KeyboardUI : MonoBehaviour, IExperimentUI
             key_char.fontSize = FONT_SIZE;
             this.keys.Add((char)('A' + i), new KeyState(rt));
         }
-
-        /*RectTransform sd_rt = Instantiate(this.keyPrefab, Vector3.zero, new Quaternion(0, 0, 0, 0), this.transform).GetComponent<RectTransform>();
-        sd_rt.localPosition = Vector3.zero;
-        sd_rt.Find("Char").GetComponent<Text>().text = "";
-        this.SD_key = new KeyState(sd_rt);*/
 
         RectTransform up_sd_rt = Instantiate(this.keyPrefab, Vector3.zero, new Quaternion(0, 0, 0, 0), this.transform).GetComponent<RectTransform>();
         up_sd_rt.localPosition = Vector3.zero;
@@ -139,19 +136,34 @@ public class KeyboardUI : MonoBehaviour, IExperimentUI
         this.touching_key_texture = Resources.Load<Texture2D>("Images/green_box");
         this.disabled_key_texture = Resources.Load<Texture2D>("Images/gray_out_box");
 
-        if (this.cropShader == null)
+        if (this.rotateShader == null)
         {
-            var s = Shader.Find("Hidden/CropAndRotate");
-            if (s == null)
+            var r = Shader.Find("Hidden/Rotate");
+            if (r == null)
             {
-                UnityLogger.Log("Shader 'Hidden/CropAndRotate' not found.");
+                //UnityLogger.Log("Shader 'Hidden/CropAndRotate' not found.");
                 return;
             }
-            this.cropMaterial = new Material(s);
+            this.rotateMaterial = new Material(r);
         }
         else
         {
-            this.cropMaterial = new Material(cropShader);
+            this.rotateMaterial = new Material(this.rotateShader);
+        }
+
+        if (this.cropShader == null)
+        {
+            var c = Shader.Find("Hidden/Crop");
+            if (c == null)
+            {
+                //UnityLogger.Log("Shader 'Hidden/CropAndRotate' not found.");
+                return;
+            }
+            this.cropMaterial = new Material(c);
+        }
+        else
+        {
+            this.cropMaterial = new Material(this.cropShader);
         }
 
         for (int i = 0; i < 29; i++)
@@ -185,21 +197,6 @@ public class KeyboardUI : MonoBehaviour, IExperimentUI
             this.phrase.GetComponent<UnityEngine.UI.Text>().text = this.required_chars;
             this.inputted_phrase.GetComponent<UnityEngine.UI.Text>().text = this.required_chars;
         }
-        /*if (this.skipChar) {
-            this.skipChar = false;
-            Logger.Logging(new PressedKeyLog('@', -1));
-            if (this.incorrect_chars.Length > 0) {
-                this.DeleteChar();
-                //this.SD_key.timer = 0.15f;
-                this.up_SD_key.timer = 0.15f;
-            }
-            else {
-                char c = this.required_chars[0];
-                this.InputChar(c);
-                this.keys[c].timer = 0.15f;
-                if (this.required_chars == "") this.StopTyping();
-            }
-        }*/
 
         Vector2 axis = this.detector.nextPosition - this.detector.markerPosition;
         Vector2 scaled_axis = axis * new Vector2(640, 480) * this.background_transform.localScale;
@@ -207,7 +204,6 @@ public class KeyboardUI : MonoBehaviour, IExperimentUI
 
         Vector2 scaled_marker_position = this.detector.markerPosition * new Vector2(640, 480) * this.background_transform.localScale;
         float angle = Mathf.Atan2(-scaled_axis.y, -scaled_axis.x);
-        this.cropMaterial.SetFloat("_Angle", angle);
 
         for (int i = 0; i < keys_array.Length; i++)
         {
@@ -231,20 +227,12 @@ public class KeyboardUI : MonoBehaviour, IExperimentUI
                     this.keys[target_char].timer -= Time.deltaTime;
                 }
                 Logger.Logging(new KeyLog(target_char, this.keys[target_char].rectTransform, KEY_SIZE));
-                uvRects[3*i+j] = MakeUVRectForCrop(pos, scaled_axis);
+                this.rotatedKeyCenterPx = Rotate(pos, imageCenterPx, -angle);
+                float keySizePx = this.keys[target_char].rectTransform.sizeDelta.x * this.keys[target_char].rectTransform.localScale.x;
+                this.cropSizePx = keySizePx * 1.323f;
+                uvRects[3*i+j] = MakeUVRectStable(this.rotatedKeyCenterPx, this.cropSizePx);
             }
         }
-
-        /*Vector2 sd_pos = scaled_marker_position + scaled_axis * (DISTANCE_FROM_MARKER / MARKER_SIZE) + downward * 0f;
-        this.SD_key.rectTransform.anchoredPosition = sd_pos;
-        this.SD_key.rectTransform.localRotation = Quaternion.Euler(0, 0, angle * Mathf.Rad2Deg);
-        float sd_scale = 1f / MARKER_SIZE * scaled_axis.magnitude / this.SD_key.rectTransform.sizeDelta.x;
-        this.SD_key.rectTransform.localScale = new Vector3(KEY_DISTANCE * sd_scale, 45.5f * sd_scale, 0);
-        if (this.SD_key.timer > 0f)
-        {
-            this.SD_key.timer -= Time.deltaTime;
-        }
-        Logger.Logging(new KeyLog('#', this.SD_key.rectTransform, KEY_DISTANCE));*/
 
         Vector2 up_sd_pos = scaled_marker_position + scaled_axis * 4.5f * (DISTANCE_FROM_MARKER / MARKER_SIZE) + downward * -0.4f;
         this.up_SD_key.rectTransform.anchoredPosition = up_sd_pos;
@@ -256,7 +244,8 @@ public class KeyboardUI : MonoBehaviour, IExperimentUI
             this.up_SD_key.timer -= Time.deltaTime;
         }
         Logger.Logging(new KeyLog('#', this.up_SD_key.rectTransform, KEY_DISTANCE));
-        uvRects[26] = MakeUVRectForCrop(up_sd_pos, scaled_axis);
+        this.rotatedKeyCenterPx = Rotate(up_sd_pos, imageCenterPx, -angle);
+        uvRects[26] = MakeUVRectStable(this.rotatedKeyCenterPx, this.cropSizePx);
 
         Vector2 enter_pos = scaled_marker_position + scaled_axis * 4.5f * (DISTANCE_FROM_MARKER / MARKER_SIZE) + downward * 0.4f;
         this.Enter_key.rectTransform.anchoredPosition = enter_pos;
@@ -268,7 +257,8 @@ public class KeyboardUI : MonoBehaviour, IExperimentUI
             this.Enter_key.timer -= Time.deltaTime;
         }
         Logger.Logging(new KeyLog('&', this.Enter_key.rectTransform, KEY_DISTANCE));
-        uvRects[27] = MakeUVRectForCrop(enter_pos, scaled_axis);
+        this.rotatedKeyCenterPx = Rotate(enter_pos, imageCenterPx, -angle);
+        uvRects[27] = MakeUVRectStable(this.rotatedKeyCenterPx, this.cropSizePx);
 
         float space_offset_y = KEY_DISTANCE / MARKER_SIZE;
         float space_offset_x = -1.0f * KEY_DISTANCE / MARKER_SIZE;
@@ -282,7 +272,8 @@ public class KeyboardUI : MonoBehaviour, IExperimentUI
             this.Space_key.timer -= Time.deltaTime;
         }
         Logger.Logging(new KeyLog('%', this.Space_key.rectTransform, KEY_DISTANCE));
-        uvRects[28] = MakeUVRectForCrop(space_pos, scaled_axis);
+        this.rotatedKeyCenterPx = Rotate(space_pos, imageCenterPx, -angle);
+        uvRects[28] = MakeUVRectStable(this.rotatedKeyCenterPx, this.cropSizePx);
 
         this.phrase.anchoredPosition = scaled_marker_position + scaled_axis * (-10.5f * KEY_DISTANCE / MARKER_SIZE + DISTANCE_FROM_MARKER / MARKER_SIZE) + downward * -4.5f * KEY_DISTANCE / MARKER_SIZE;
         this.phrase.localRotation = Quaternion.Euler(0, 0, angle * Mathf.Rad2Deg);
@@ -317,7 +308,7 @@ public class KeyboardUI : MonoBehaviour, IExperimentUI
         try
         {
             this.background_image = this.cc.GetBackgroundTexture();
-            UnityLogger.Log("[Crop] Background is not NULL.");
+            //UnityLogger.Log("[Crop] Background is not NULL.");
         }
         catch
         {
@@ -326,7 +317,7 @@ public class KeyboardUI : MonoBehaviour, IExperimentUI
 
         if (this.background_image == null)
         {
-            UnityLogger.Log("[Crop] Background is NULL → sending dummy frame.");
+            //UnityLogger.Log("[Crop] Background is NULL → sending dummy frame.");
             for (int i = 0; i < 29; i++)
             {
                 this.cropsBytes.Add(null); // これで送信側の if (bytes == null) が発動
@@ -334,39 +325,40 @@ public class KeyboardUI : MonoBehaviour, IExperimentUI
         }
         else
         {
-            UnityLogger.Log("background changes from Textuure2D to Render start");
-            Graphics.Blit(this.background_image, this.rtSource);
+            //UnityLogger.Log("background changes from Textuure2D to Render start");
+            this.rotateMaterial.SetFloat("_Angle", angle);
+            Graphics.Blit(this.background_image, this.rtSource, this.rotateMaterial);
             this.cropMaterial.SetTexture("_MainTex", this.rtSource);
             if (this.cropMaterial == null)
             {
-                UnityLogger.Log("cropMaterial is null");
+                //UnityLogger.Log("cropMaterial is null");
             }
-            UnityLogger.Log("background changes from Textuure2D to Render finish");
+            //UnityLogger.Log("background changes from Textuure2D to Render finish");
             //image crop by GPU
             for (int i = 0; i < 29; i++)
             {
                 this.cropMaterial.SetVector("_UVRect", uvRects[i]);
                 Graphics.Blit(this.rtSource, this.crops[i], this.cropMaterial);
-                UnityLogger.Log("crop succcess");
+                //UnityLogger.Log("crop succcess");
 
                 //RenderTexture to Texture2D
                 RenderTexture.active = this.crops[i];
                 this.readTex[i].ReadPixels(new Rect(0, 0, this.cropW, this.cropH), 0, 0);
                 this.readTex[i].Apply();
-                UnityLogger.Log("crop changes from Render to Texture");
+                //UnityLogger.Log("crop changes from Render to Texture");
                 try
                 {
                     this.raw = this.readTex[i].GetRawTextureData();
-                    UnityLogger.Log("raw can read");
+                    //UnityLogger.Log("raw can read");
                     UnityLogger.Log("raw length: " + this.raw.Length);
                 }
                 catch
                 {
-                    UnityLogger.Log("raw can not read");
+                    //UnityLogger.Log("raw can not read");
                 }
                 if (this.raw == null)
                 {
-                    UnityLogger.Log("raw is null");
+                    //UnityLogger.Log("raw is null");
                 }
                 this.cropsBytes.Add(this.raw);
                 UnityLogger.Log("raw add success");
@@ -375,7 +367,7 @@ public class KeyboardUI : MonoBehaviour, IExperimentUI
             UnityLogger.Log("[Crop] generation success.");
         }
         this.keyboardImageSender.EnqueueFrame(this.cropsBytes);
-        this.keyboardImageSender.TrySendFrame();
+        //this.keyboardImageSender.TrySendFrame();
         this.cropsBytes.Clear();
 
         this.UpdateKeyTextures();
@@ -411,37 +403,44 @@ public class KeyboardUI : MonoBehaviour, IExperimentUI
         this.Space_key.rectTransform.GetComponent<RawImage>().texture = applying_texture;
     }
 
-    //MARKER_SIZE=26 but real is 4cm
-    public static Vector4 MakeUVRectForCrop(
-        Vector2 keyCenterPx,
-        Vector2 scaledAxis
-    )
+    static Vector2 Rotate(Vector2 p, Vector2 center, float angleRad)
     {
-        //markerSizeCm is 4cm
-        const float markerSizeCm = 4.0f;
-        const float cropSizeCm = 3f;
+        float s = Mathf.Sin(angleRad);
+        float c = Mathf.Cos(angleRad);
+        Vector2 d = p - center;
+        return new Vector2(
+            d.x * c - d.y * s,
+            d.x * s + d.y * c
+        ) + center;
+    }
+
+    static Vector4 MakeUVRectStable(
+    Vector2 centerPx,
+    float cropSizePx
+)
+    {
         const float IMG_W = 640f;
         const float IMG_H = 480f;
 
-        // ピクセル/cm の換算比率
-        float pixelPerCm = scaledAxis.magnitude / markerSizeCm;
+        float left = centerPx.x - cropSizePx * 0.5f;
+        float bottom = centerPx.y - cropSizePx * 0.5f;
 
-        // 一辺 cropSizeCm の正方形
-        float cropPx = cropSizeCm * pixelPerCm;
+        // ピクセル量子化（揺れ防止）
+        left = Mathf.Round(left);
+        bottom = Mathf.Round(bottom);
 
-        // 左下原点のピクセル座標
-        float left = keyCenterPx.x - cropPx * 0.5f;
-        float bottom = keyCenterPx.y - cropPx * 0.5f;
+        // clamp
+        left = Mathf.Clamp(left, 0, IMG_W - cropSizePx);
+        bottom = Mathf.Clamp(bottom, 0, IMG_H - cropSizePx);
 
-        // UV 変換
-        float u = left / IMG_W;
-        float v = bottom / IMG_H;
-        float w = cropPx / IMG_W;
-        float h = cropPx / IMG_H;
-
-        // shader 用に UVRect を返す
-        return new Vector4(u, v, w, h);
+        return new Vector4(
+            left / IMG_W,
+            bottom / IMG_H,
+            cropSizePx / IMG_W,
+            cropSizePx / IMG_H
+        );
     }
+
 
     public void CalcHoverKey(Vector2[] fingertipAnchoredPositions)
     {

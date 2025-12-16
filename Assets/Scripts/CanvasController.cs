@@ -41,8 +41,8 @@ public class CanvasController : MonoBehaviour
             this.background.SetPixels32(this.colors);
             this.background.Apply();
             this.detector.TextureUpdated();
-            UnityLogger.Log("Recv pixel count = " + this.colors.Length);
-            UnityLogger.Log("First pixel = " + this.colors[0]);
+            //UnityLogger.Log("Recv pixel count = " + this.colors.Length);
+            //UnityLogger.Log("First pixel = " + this.colors[0]);
         }
         if (this.sh_foreground.TryGet(out this.colors))
         {
