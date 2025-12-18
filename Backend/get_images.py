@@ -8,7 +8,8 @@ from PIL import Image
 from namedpipe import NamedPipeClient
 from threading import Thread
 
-MAGIC = b'KSF1'
+MAGIC = b'KSF1PIPE'
+MAGIC_LEN = len(MAGIC)
 
 class MultiImageReceiver(Thread):
     def __init__(self):
@@ -41,8 +42,8 @@ class MultiImageReceiver(Thread):
             if not b:
                 return False
             buf += b   
-            if len(buf) > 4:
-                buf = buf[-4:]
+            if len(buf) > MAGIC_LEN:
+                buf = buf[-MAGIC_LEN:]
             if buf == MAGIC:
                 return True
 
@@ -57,6 +58,7 @@ class MultiImageReceiver(Thread):
         if not size_bytes:
             return None, None
         frame_size = struct.unpack("<I", size_bytes)[0]
+        print(f"frame_size: {frame_size}")
 
         # ---- PAYLOAD ----
         payload = self.read_exact(pipe, frame_size)
@@ -154,15 +156,15 @@ class MultiImageReceiver(Thread):
 
     def save_frame_images(self, frame_num, images):
         #29枚のキー画像を保存する
-        #if (frame_num % 100 == 0 and frame_num >= 1000):
-            #save_dir = f"./image_test/frame_{frame_num}"
-            #os.makedirs(save_dir, exist_ok=True)
+        if (frame_num % 10 == 0 and frame_num >= 50):
+            save_dir = f"./image_test/frame_{frame_num}"
+            os.makedirs(save_dir, exist_ok=True)
 
-            #for i, multi_img in enumerate(images):
-                #path = os.path.join(save_dir, f"key_{i:02d}.png")
-                #multi_img.save(path)
+            for i, multi_img in enumerate(images):
+                path = os.path.join(save_dir, f"key_{i:02d}.png")
+                multi_img.save(path)
 
-        print(f"Saved frame {frame_num} ({len(images)} images)")
+            print(f"Saved frame {frame_num} ({len(images)} images)")
 
     def run(self):
         connected = False

@@ -40,18 +40,21 @@ public class KeyboardUI : MonoBehaviour, IExperimentUI
     public int cropH = 64;
     private Material cropMaterial, rotateMaterial;
     private RenderTexture rtSource;  // Pythonからの元画像を入れる
-    private RenderTexture[] crops = new RenderTexture[29];
-    private Texture2D[] readTex = new Texture2D[29];
+    private RenderTexture crops;
+    private Texture2D readTex;
     private CanvasController cc;     // ← キャッシュ
     public byte[] raw;
+    private int key_count; 
 
     private Vector2[] keyCenters = new Vector2[29];
     private Vector4[] uvRects = new Vector4[29];
     private Vector2 imageCenterPx = new Vector2(640f * 0.5f, 480f * 0.5f);
     private Vector2 rotatedKeyCenterPx;
     private float cropSizePx;
+    private int frameCounter = 0;
 
-    private List<byte[]> cropsBytes = new List<byte[]>();
+    //private List<byte[]> cropsBytes = new List<byte[]>();
+    private List<byte[]> generatedImages;
 
     //public
     public Dictionary<char, KeyState> keys = new Dictionary<char, KeyState>();
@@ -166,12 +169,9 @@ public class KeyboardUI : MonoBehaviour, IExperimentUI
             this.cropMaterial = new Material(this.cropShader);
         }
 
-        for (int i = 0; i < 29; i++)
-        {
-            this.crops[i] = new RenderTexture(this.cropW, this.cropH, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.Linear);
-            this.crops[i].Create();
-            this.readTex[i] = new Texture2D(this.cropW, this.cropH, TextureFormat.RGB24, false);
-        }
+        this.crops = new RenderTexture(this.cropW, this.cropH, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.Linear);
+        this.crops.Create();
+        this.readTex = new Texture2D(this.cropW, this.cropH, TextureFormat.RGB24, false);
 
         this.cc = UnityEngine.Object.FindObjectOfType<CanvasController>();
         // 元画像用 RenderTexture
@@ -204,6 +204,7 @@ public class KeyboardUI : MonoBehaviour, IExperimentUI
 
         Vector2 scaled_marker_position = this.detector.markerPosition * new Vector2(640, 480) * this.background_transform.localScale;
         float angle = Mathf.Atan2(-scaled_axis.y, -scaled_axis.x);
+        this.key_count = 0;
 
         for (int i = 0; i < keys_array.Length; i++)
         {
@@ -229,8 +230,10 @@ public class KeyboardUI : MonoBehaviour, IExperimentUI
                 Logger.Logging(new KeyLog(target_char, this.keys[target_char].rectTransform, KEY_SIZE));
                 this.rotatedKeyCenterPx = Rotate(pos, imageCenterPx, -angle);
                 float keySizePx = this.keys[target_char].rectTransform.sizeDelta.x * this.keys[target_char].rectTransform.localScale.x;
-                this.cropSizePx = keySizePx * 1.323f;
-                uvRects[3*i+j] = MakeUVRectStable(this.rotatedKeyCenterPx, this.cropSizePx);
+                //this.cropSizePx = keySizePx * 1.323f;
+                this.cropSizePx = keySizePx * 10.0f;
+                uvRects[this.key_count] = MakeUVRectStable(this.rotatedKeyCenterPx, this.cropSizePx);
+                this.key_count++;
             }
         }
 
@@ -305,6 +308,8 @@ public class KeyboardUI : MonoBehaviour, IExperimentUI
         this.warning.localScale = new Vector3(1, 1, 0) * KEY_SIZE / MARKER_SIZE * scaled_axis.magnitude / 40f;
         this.warning.gameObject.SetActive(this.detector.markerTiltWarning || !this.detector.isDetected);
 
+        this.generatedImages = new List<byte[]>(29);
+
         try
         {
             this.background_image = this.cc.GetBackgroundTexture();
@@ -320,7 +325,7 @@ public class KeyboardUI : MonoBehaviour, IExperimentUI
             //UnityLogger.Log("[Crop] Background is NULL → sending dummy frame.");
             for (int i = 0; i < 29; i++)
             {
-                this.cropsBytes.Add(null); // これで送信側の if (bytes == null) が発動
+                this.generatedImages.Add(null); // これで送信側の if (bytes == null) が発動
             }
         }
         else
@@ -338,19 +343,19 @@ public class KeyboardUI : MonoBehaviour, IExperimentUI
             for (int i = 0; i < 29; i++)
             {
                 this.cropMaterial.SetVector("_UVRect", uvRects[i]);
-                Graphics.Blit(this.rtSource, this.crops[i], this.cropMaterial);
+                Graphics.Blit(this.rtSource, this.crops, this.cropMaterial);
                 //UnityLogger.Log("crop succcess");
 
                 //RenderTexture to Texture2D
-                RenderTexture.active = this.crops[i];
-                this.readTex[i].ReadPixels(new Rect(0, 0, this.cropW, this.cropH), 0, 0);
-                this.readTex[i].Apply();
+                RenderTexture.active = this.crops;
+                this.readTex.ReadPixels(new Rect(0, 0, this.cropW, this.cropH), 0, 0);
+                this.readTex.Apply();
                 //UnityLogger.Log("crop changes from Render to Texture");
                 try
                 {
-                    this.raw = this.readTex[i].GetRawTextureData();
+                    this.raw = this.readTex.GetRawTextureData();
                     //UnityLogger.Log("raw can read");
-                    UnityLogger.Log("raw length: " + this.raw.Length);
+                    //UnityLogger.Log("raw length: " + this.raw.Length);
                 }
                 catch
                 {
@@ -360,15 +365,16 @@ public class KeyboardUI : MonoBehaviour, IExperimentUI
                 {
                     //UnityLogger.Log("raw is null");
                 }
-                this.cropsBytes.Add(this.raw);
-                UnityLogger.Log("raw add success");
+                this.generatedImages.Add(this.raw);
+                //UnityLogger.Log("raw add success");
             }
             RenderTexture.active = null;
-            UnityLogger.Log("[Crop] generation success.");
+            //UnityLogger.Log("[Crop] generation success.");
         }
-        this.keyboardImageSender.EnqueueFrame(this.cropsBytes);
+        this.keyboardImageSender.EnqueueFrame(this.generatedImages);
+        //this.keyboardImageSender.setFrameCount(this.frameCounter++);
         //this.keyboardImageSender.TrySendFrame();
-        this.cropsBytes.Clear();
+        //this.cropsBytes.Clear();
 
         this.UpdateKeyTextures();
     }
