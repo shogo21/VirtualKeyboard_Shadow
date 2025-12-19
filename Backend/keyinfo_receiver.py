@@ -11,9 +11,10 @@ MAGIC = b'KSF1PIPE'
 MAGIC_LEN = len(MAGIC)
 
 class KeyInfoReceiver(Thread):
-    def __init__(self):
+    def __init__(self, sh_frameid_from_unity):
         super(KeyInfoReceiver, self).__init__()
         self.stop_flg = False
+        self.sh_frameid_from_unity = sh_frameid_from_unity
         self.pipe = NamedPipeClient("KeyInfoPipe")
 
     def read_exact(self, size):
@@ -42,7 +43,6 @@ class KeyInfoReceiver(Thread):
         if not ok:
             return None
 
-        # ÉtÉåÅ[ÉÄî‘çÜ
         raw_frame_id = self.read_exact(4)
         if not raw_frame_id:
             return None
@@ -67,7 +67,9 @@ class KeyInfoReceiver(Thread):
 
         while not self.stop_flg:
             frame_id = self.read_one_frame()
-            print(f"frame_id: {frame_id}")
+            #print(f"frame_id: {frame_id}: {type(frame_id)}")
+            self.sh_frameid_from_unity.set(frame_id)
+            
 
         print("KeyInfo Receiver STOP")
 
