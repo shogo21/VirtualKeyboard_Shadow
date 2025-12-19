@@ -8,6 +8,8 @@ import preprocessing
 
 import tensorflow as tf
 import numpy as np
+import os
+import cv2
 
 WINDOW_SIZE = 5
 NUM_ROWS = 4
@@ -39,11 +41,12 @@ def process_values(touches, output, output_float):
                 output[row][int((WINDOW_SIZE-1)/2)] = 0
 
 class TouchDetector(Thread):
-    def __init__(self, sh_image_and_landmarks, sh_touches):
+    def __init__(self, sh_image_and_landmarks, sh_touches, sh_framebuffer):
         super(TouchDetector, self).__init__()
         self.stop_flg = False
         self.sh_image_and_landmarks = sh_image_and_landmarks
         self.sh_touches = sh_touches
+        self.sh_framebuffer = sh_framebuffer
         self.model = tf.saved_model.load('./predict_araimodel_6464_statefultrue')
         # self.model.compile()
 
@@ -57,10 +60,17 @@ class TouchDetector(Thread):
         while not self.stop_flg:
             logging('TouchDetectorLoopLog', None)
             image_and_landmarks = self.sh_image_and_landmarks.try_get()
+            """test_data = self.sh_framebuffer.pop_oldest()
+            if test_data is not None:
+                fid, img = test_data
+                if (fid % 10 == 0):
+                    cv2.imwrite(f"./image_test/frame_{fid}.png", img)
+                    print(f"Saved frame {fid}")"""
+
             if image_and_landmarks is None:
                 time.sleep(0.02)
             else:
-                image, landmarks = image_and_landmarks
+                frame_id, image, landmarks = image_and_landmarks
                 cropped_images = preprocessing.crop(image, landmarks)
 
                 if cropped_images is None:

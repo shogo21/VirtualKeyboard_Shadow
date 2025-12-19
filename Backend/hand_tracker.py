@@ -43,7 +43,7 @@ class HandTracker(Thread):
 
                     hand_landmarks = self.select_center_hand(results.multi_hand_landmarks)
 
-                    self.sh_image_and_landmarks.set((image, hand_landmarks.landmark))
+                    self.sh_image_and_landmarks.set((frame_id, image, hand_landmarks.landmark))
                     fingertips = [
                         (hand_landmarks.landmark[POS.WRIST].x, hand_landmarks.landmark[POS.WRIST].y),
                         (hand_landmarks.landmark[POS.INDEX_FINGER_TIP].x, hand_landmarks.landmark[POS.INDEX_FINGER_TIP].y),
