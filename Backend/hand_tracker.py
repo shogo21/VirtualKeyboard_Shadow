@@ -27,10 +27,11 @@ class HandTracker(Thread):
             
             while not self.stop_flg:
                 logging('HandTrackerLoopLog', None)
-                image = self.sh_image.try_get()
-                if image is None:
+                frame_id_image = self.sh_image.try_get()
+                if frame_id_image is None:
                     time.sleep(0.02)
                 else:
+                    frame_id, image = frame_id_image
                     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
                     results = hands.process(image)
 

@@ -3,10 +3,18 @@ using System;
 
 public class ImageReceiver : ThreadRunner
 {
-    private SharedData<Color32[]> sh_background;
-    private SharedData<Color32[]> sh_foreground;
+    private SharedData<(uint, Color32[])> sh_background;
+    private SharedData<(uint, Color32[])> sh_foreground;
 
-    public ImageReceiver(SharedData<Color32[]> sh_background, SharedData<Color32[]> sh_foreground)
+    const int WIDTH = 640;
+    const int HEIGHT = 480;
+    const int CHANNELS = 4;
+
+    const int FRAME_ID_SIZE = 4;
+    const int IMAGE_SIZE = WIDTH * HEIGHT * CHANNELS;
+    const int TOTAL_SIZE = FRAME_ID_SIZE + IMAGE_SIZE;
+
+    public ImageReceiver(SharedData<(uint, Color32[])> sh_background, SharedData<(uint, Color32[])> sh_foreground)
     {
         this.sh_background = sh_background;
         this.sh_foreground = sh_foreground;
@@ -24,10 +32,34 @@ public class ImageReceiver : ThreadRunner
                     if (this.token.IsCancellationRequested) break;
                     if (pipe.status == NamedPipeServer.Status.Connected)
                     {
-                        byte[] bytes = pipe.Read(640 * 480 * 4);
+                        byte[] buffer = pipe.Read(TOTAL_SIZE);
+                        if (buffer == null) break;
+
+                        // ===== frame_id を読む 0 means from first=====
+                        uint frameId = BitConverter.ToUInt32(buffer, 0);
+
+                        // ===== image bytes を切り出す =====
+                        byte[] imageBytes = new byte[IMAGE_SIZE];
+                        Buffer.BlockCopy(
+                            buffer,
+                            FRAME_ID_SIZE, //the position which starts reading from
+                            imageBytes,
+                            0,
+                            IMAGE_SIZE
+                        );
+
+                        // ===== SharedData にセット =====
+                        this.sh_background.Set(
+                            (frameId, BytesToColorsNotMasked(imageBytes))
+                        );
+
+                        this.sh_foreground.Set(
+                            (frameId, BytesToColors(imageBytes))
+                        );
+                        /*byte[] bytes = pipe.Read(640 * 480 * 4);
                         if (bytes == null) break;
                         this.sh_background.Set(BytesToColorsNotMasked(bytes));
-                        this.sh_foreground.Set(BytesToColors(bytes));
+                        this.sh_foreground.Set(BytesToColors(bytes));*/
                     }
                 }
                 catch (Exception e)

@@ -39,6 +39,7 @@ tracker.start()
 detector.start()
 
 viewer = TouchViewer()
+frame_id = 0
 
 try:
     while True:
@@ -49,8 +50,9 @@ try:
 
         logger.recording(frame)
 
-        sh_image1.set(frame)
-        sh_image2.set(frame)
+        sh_image1.set((frame_id, frame))
+        sh_image2.set((frame_id, frame))
+        frame_id += 1
 
         viewer.replot()
 
