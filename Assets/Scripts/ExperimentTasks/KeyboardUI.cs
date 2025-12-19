@@ -32,6 +32,7 @@ public class KeyboardUI : MonoBehaviour, IExperimentUI
     private RectTransform rect_transform;
     private ARMarkerDetector detector;
     private RectTransform background_transform;
+    private CanvasController canvascontroller;
 
     private Dictionary<char, KeyState> keys = new Dictionary<char, KeyState>();
     private KeyState SD_key, up_SD_key, Enter_key, Space_key;
@@ -57,6 +58,9 @@ public class KeyboardUI : MonoBehaviour, IExperimentUI
     private int phrase_index = -1;
     private float phrase_timer = 0;
     private float inputted_phrase_timer = 0;
+    private uint current_frame, last_frame_id = 100;
+    private SharedData<uint> frame_id = new SharedData<uint>();
+    //private uint frame_id;
 
     bool input_accepting = false;
 
@@ -66,6 +70,8 @@ public class KeyboardUI : MonoBehaviour, IExperimentUI
 
     public bool forceStop = false;
     public bool skipChar = false;
+
+    private KeyInfoSender keyinfosender;
 
 
     void Start()
@@ -78,6 +84,7 @@ public class KeyboardUI : MonoBehaviour, IExperimentUI
         this.inputted_phrase = this.rect_transform.Find("InputtedPhrase").GetComponent<RectTransform>();
         this.warning = this.rect_transform.Find("Warning").GetComponent<RectTransform>();
         this.warning2 = GameObject.Find("Canvas/Warning2").GetComponent<RectTransform>();
+        this.canvascontroller = GameObject.Find("Canvas/Background").GetComponent<CanvasController>();
 
         for (int i = 0; i < 26; i++)
         {
@@ -119,6 +126,9 @@ public class KeyboardUI : MonoBehaviour, IExperimentUI
         this.touching_key_texture = Resources.Load<Texture2D>("Images/green_box");
         this.disabled_key_texture = Resources.Load<Texture2D>("Images/gray_out_box");
 
+        this.keyinfosender = new KeyInfoSender(this.frame_id);
+        this.keyinfosender.Start();
+
         this.StopTyping();
     }
 
@@ -151,6 +161,13 @@ public class KeyboardUI : MonoBehaviour, IExperimentUI
                 if (this.required_chars == "") this.StopTyping();
             }
         }*/
+
+        this.current_frame = this.canvascontroller.fid;
+        if (this.current_frame != this.last_frame_id)
+        {
+            this.frame_id.Set(this.current_frame);
+            this.last_frame_id = this.current_frame;
+        }
 
         Vector2 axis = this.detector.nextPosition - this.detector.markerPosition;
         Vector2 scaled_axis = axis * new Vector2(640, 480) * this.background_transform.localScale;

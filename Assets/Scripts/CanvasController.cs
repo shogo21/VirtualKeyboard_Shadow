@@ -13,7 +13,8 @@ public class CanvasController : MonoBehaviour
     private Texture2D background;
     private Texture2D foreground;
     private Color32[] colors;
-    private uint frameId;
+    private uint frameId_back, frameId_fore;
+    public uint fid => frameId_back;
 
     private ARMarkerDetector detector;
 
@@ -39,8 +40,8 @@ public class CanvasController : MonoBehaviour
     {
         if (this.sh_background.TryGet(out var data_back))
         {
-            this.frameId = data_back.Item1;
-            UnityLogger.Log("frame_id: "+this.frameId);
+            this.frameId_back = data_back.Item1;
+            //this.fid = this.frameId_back;
             this.colors = data_back.Item2;
             this.background.SetPixels32(this.colors);
             this.background.Apply();
@@ -48,7 +49,7 @@ public class CanvasController : MonoBehaviour
         }
         if (this.sh_foreground.TryGet(out var data_fore))
         {
-            this.frameId = data_fore.Item1;
+            this.frameId_fore = data_fore.Item1;
             this.colors = data_fore.Item2;
             this.foreground.SetPixels32(MultiplyTransparency(0.5f, this.colors));
             this.foreground.Apply();
