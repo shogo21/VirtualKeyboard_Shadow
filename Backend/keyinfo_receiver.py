@@ -11,10 +11,10 @@ MAGIC = b'KSF1PIPE'
 MAGIC_LEN = len(MAGIC)
 
 class KeyInfoReceiver(Thread):
-    def __init__(self, sh_frameid_from_unity):
+    def __init__(self, sh_keys_pos_from_unity):
         super(KeyInfoReceiver, self).__init__()
         self.stop_flg = False
-        self.sh_frameid_from_unity = sh_frameid_from_unity
+        self.sh_keys_pos_from_unity = sh_keys_pos_from_unity
         self.pipe = NamedPipeClient("KeyInfoPipe")
 
     def read_exact(self, size):
@@ -41,14 +41,29 @@ class KeyInfoReceiver(Thread):
     def read_one_frame(self):
         ok = self.read_until_magic()
         if not ok:
-            return None
+            return None, None
 
         raw_frame_id = self.read_exact(4)
         if not raw_frame_id:
-            return None
+            return None, None
         frame_id = struct.unpack("<I", raw_frame_id)[0]
 
-        return frame_id
+        keys = []
+        for _ in range(29):
+            corners = []
+            for _ in range(4):
+                x = self.read_exact(4)
+                if not x:
+                    return None, None
+                pos_x = struct.unpack("<f", x)[0]
+                y = self.read_exact(4)
+                if not y:
+                    return None, None
+                pos_y = struct.unpack("<f", y)[0]
+                corners.append((pos_x, pos_y))
+            keys.append(corners)
+
+        return frame_id, keys
 
     def run(self):
         connected = False
@@ -66,9 +81,12 @@ class KeyInfoReceiver(Thread):
         print("KeyInfo Receiver START.")
 
         while not self.stop_flg:
-            frame_id = self.read_one_frame()
-            #print(f"frame_id: {frame_id}: {type(frame_id)}")
-            self.sh_frameid_from_unity.set(frame_id)
+            frame_id, keys = self.read_one_frame()
+            """print(f"frame_id: {frame_id}: {type(frame_id)}")
+            for i in range(29):
+                for j in range(4):
+                    print(f"{i}key {j}corner: {keys[i][j]}")"""
+            self.sh_keys_pos_from_unity.set((frame_id, keys))
             
 
         print("KeyInfo Receiver STOP")

@@ -35,6 +35,7 @@ public class KeyboardUI : MonoBehaviour, IExperimentUI
     private CanvasController canvascontroller;
 
     private Dictionary<char, KeyState> keys = new Dictionary<char, KeyState>();
+    private Dictionary<char, Vector2[]> keys_rotated_pos_dict = new Dictionary<char, Vector2[]>();
     private KeyState SD_key, up_SD_key, Enter_key, Space_key;
 
     private char[] hovered_chars = { ' ', ' ', ' ', ' ' };
@@ -60,7 +61,11 @@ public class KeyboardUI : MonoBehaviour, IExperimentUI
     private float inputted_phrase_timer = 0;
     private uint current_frame, last_frame_id = 100;
     private SharedData<uint> frame_id = new SharedData<uint>();
-    //private uint frame_id;
+    private float scale, keySizePx;
+    private int key_count;
+
+    private Vector2[][] keys_rotated_pos = new Vector2[29][];
+    private SharedData<Vector2[][]> keys_total_pos = new SharedData<Vector2[][]>();
 
     bool input_accepting = false;
 
@@ -95,6 +100,7 @@ public class KeyboardUI : MonoBehaviour, IExperimentUI
             key_char.text = "" + (char)('A' + i);
             key_char.fontSize = FONT_SIZE;
             this.keys.Add((char)('A' + i), new KeyState(rt));
+            this.keys_rotated_pos_dict.Add((char)('A' + i), new Vector2[4]);
         }
 
         /*RectTransform sd_rt = Instantiate(this.keyPrefab, Vector3.zero, new Quaternion(0, 0, 0, 0), this.transform).GetComponent<RectTransform>();
@@ -105,20 +111,23 @@ public class KeyboardUI : MonoBehaviour, IExperimentUI
         RectTransform up_sd_rt = Instantiate(this.keyPrefab, Vector3.zero, new Quaternion(0, 0, 0, 0), this.transform).GetComponent<RectTransform>();
         up_sd_rt.localPosition = Vector3.zero;
         up_sd_rt.Find("Char").GetComponent<UnityEngine.UI.Text>().text = "Del";
-        up_sd_rt.Find("Char").GetComponent<UnityEngine.UI.Text>().fontSize = 50;
+        up_sd_rt.Find("Char").GetComponent<UnityEngine.UI.Text>().fontSize = 80;
         this.up_SD_key = new KeyState(up_sd_rt);
+        this.keys_rotated_pos_dict.Add('#', new Vector2[4]); 
 
         RectTransform enter_rt = Instantiate(this.keyPrefab, Vector3.zero, new Quaternion(0, 0, 0, 0), this.transform).GetComponent<RectTransform>();
         enter_rt.localPosition = Vector3.zero;
         enter_rt.Find("Char").GetComponent<UnityEngine.UI.Text>().text = "Ent";
-        enter_rt.Find("Char").GetComponent<UnityEngine.UI.Text>().fontSize = 50;
+        enter_rt.Find("Char").GetComponent<UnityEngine.UI.Text>().fontSize = 80;
         this.Enter_key = new KeyState(enter_rt);
+        this.keys_rotated_pos_dict.Add('&', new Vector2[4]);
 
         RectTransform space_rt = Instantiate(this.keyPrefab, Vector3.zero, new Quaternion(0, 0, 0, 0), this.transform).GetComponent<RectTransform>();
         space_rt.localPosition = Vector3.zero;
-        space_rt.Find("Char").GetComponent<UnityEngine.UI.Text>().text = "Spa";
-        space_rt.Find("Char").GetComponent<UnityEngine.UI.Text>().fontSize = 50;
+        space_rt.Find("Char").GetComponent<UnityEngine.UI.Text>().text = "Sp";
+        space_rt.Find("Char").GetComponent<UnityEngine.UI.Text>().fontSize = 80;
         this.Space_key = new KeyState(space_rt);
+        this.keys_rotated_pos_dict.Add('%', new Vector2[4]);
 
 
         this.normal_key_texture = Resources.Load<Texture2D>("Images/black_box");
@@ -126,7 +135,15 @@ public class KeyboardUI : MonoBehaviour, IExperimentUI
         this.touching_key_texture = Resources.Load<Texture2D>("Images/green_box");
         this.disabled_key_texture = Resources.Load<Texture2D>("Images/gray_out_box");
 
-        this.keyinfosender = new KeyInfoSender(this.frame_id);
+        for (int i = 0; i < 29; i++)
+        {
+            this.keys_rotated_pos[i] = new Vector2[4];
+        }
+
+        // ここで初めて Set
+        this.keys_total_pos.Set(this.keys_rotated_pos);
+
+        this.keyinfosender = new KeyInfoSender(this.frame_id, this.keys_total_pos);
         this.keyinfosender.Start();
 
         this.StopTyping();
@@ -146,21 +163,6 @@ public class KeyboardUI : MonoBehaviour, IExperimentUI
             this.phrase.GetComponent<UnityEngine.UI.Text>().text = this.required_chars;
             this.inputted_phrase.GetComponent<UnityEngine.UI.Text>().text = this.required_chars;
         }
-        /*if (this.skipChar) {
-            this.skipChar = false;
-            Logger.Logging(new PressedKeyLog('@', -1));
-            if (this.incorrect_chars.Length > 0) {
-                this.DeleteChar();
-                //this.SD_key.timer = 0.15f;
-                this.up_SD_key.timer = 0.15f;
-            }
-            else {
-                char c = this.required_chars[0];
-                this.InputChar(c);
-                this.keys[c].timer = 0.15f;
-                if (this.required_chars == "") this.StopTyping();
-            }
-        }*/
 
         this.current_frame = this.canvascontroller.fid;
         if (this.current_frame != this.last_frame_id)
@@ -175,6 +177,7 @@ public class KeyboardUI : MonoBehaviour, IExperimentUI
 
         Vector2 scaled_marker_position = this.detector.markerPosition * new Vector2(640, 480) * this.background_transform.localScale;
         float angle = Mathf.Atan2(-scaled_axis.y, -scaled_axis.x);
+        this.key_count = 0;
 
         for (int i = 0; i < keys_array.Length; i++)
         {
@@ -190,8 +193,16 @@ public class KeyboardUI : MonoBehaviour, IExperimentUI
 
                 this.keys[target_char].rectTransform.localRotation = Quaternion.Euler(0, 0, angle * Mathf.Rad2Deg);
 
-                float scale = KEY_SIZE / MARKER_SIZE * scaled_axis.magnitude / this.keys[target_char].rectTransform.sizeDelta.x;
+                scale = KEY_SIZE / MARKER_SIZE * scaled_axis.magnitude / this.keys[target_char].rectTransform.sizeDelta.x;
                 this.keys[target_char].rectTransform.localScale = new Vector3(scale, scale, 0);
+                this.keySizePx = this.keys[target_char].rectTransform.sizeDelta.x * this.keys[target_char].rectTransform.localScale.x;
+                this.keys_rotated_pos_dict[target_char] = GetRotatedQuad(pos, this.keySizePx, angle);
+                this.keys_rotated_pos[key_count] = this.keys_rotated_pos_dict[target_char];
+                this.key_count += 1;
+                /*for (int k = 0; k < 4; k++)
+                {
+                    UnityLogger.Log($"{target_char} corner {k}: {this.keys_rotated_pos[key_count][k]}");
+                }*/
 
                 if (this.keys[target_char].timer > 0f)
                 {
@@ -212,22 +223,30 @@ public class KeyboardUI : MonoBehaviour, IExperimentUI
         }
         Logger.Logging(new KeyLog('#', this.SD_key.rectTransform, KEY_DISTANCE));*/
 
-        Vector2 up_sd_pos = scaled_marker_position + scaled_axis * 4.5f * (DISTANCE_FROM_MARKER / MARKER_SIZE) + downward * -0.5f;
+        Vector2 up_sd_pos = scaled_marker_position + scaled_axis * 4.5f * (DISTANCE_FROM_MARKER / MARKER_SIZE) + downward * -0.3f;
         this.up_SD_key.rectTransform.anchoredPosition = up_sd_pos;
         this.up_SD_key.rectTransform.localRotation = Quaternion.Euler(0, 0, angle * Mathf.Rad2Deg);
-        float up_sd_scale = 1f / MARKER_SIZE * scaled_axis.magnitude / this.up_SD_key.rectTransform.sizeDelta.x;
-        this.up_SD_key.rectTransform.localScale = new Vector3(KEY_DISTANCE * up_sd_scale, 25.5f * up_sd_scale, 0);
+        //float up_sd_scale = KEY_SIZE / MARKER_SIZE * scaled_axis.magnitude / this.up_SD_key.rectTransform.sizeDelta.x;
+        this.up_SD_key.rectTransform.localScale = new Vector3(scale, scale, 0);
+        this.keys_rotated_pos_dict['#'] = GetRotatedQuad(up_sd_pos, this.keySizePx, angle);
+        this.keys_rotated_pos[26] = this.keys_rotated_pos_dict['#'];
+        /*for (int k = 0; k < 4; k++)
+        {
+            UnityLogger.Log($"# corner {k}: {this.keys_rotated_pos[26][k]}");
+        }*/
         if (this.up_SD_key.timer > 0f)
         {
             this.up_SD_key.timer -= Time.deltaTime;
         }
         Logger.Logging(new KeyLog('#', this.up_SD_key.rectTransform, KEY_DISTANCE));
 
-        Vector2 enter_pos = scaled_marker_position + scaled_axis * 4.5f * (DISTANCE_FROM_MARKER / MARKER_SIZE) + downward * 0.5f;
+        Vector2 enter_pos = scaled_marker_position + scaled_axis * 4.5f * (DISTANCE_FROM_MARKER / MARKER_SIZE) + downward * 0.3f;
         this.Enter_key.rectTransform.anchoredPosition = enter_pos;
         this.Enter_key.rectTransform.localRotation = Quaternion.Euler(0, 0, angle * Mathf.Rad2Deg);
-        float enter_scale = 1f / MARKER_SIZE * scaled_axis.magnitude / this.Enter_key.rectTransform.sizeDelta.x;
-        this.Enter_key.rectTransform.localScale = new Vector3(KEY_DISTANCE * enter_scale, 25.5f * enter_scale, 0);
+        //float enter_scale = KEY_SIZE / MARKER_SIZE * scaled_axis.magnitude / this.Enter_key.rectTransform.sizeDelta.x;
+        this.Enter_key.rectTransform.localScale = new Vector3(scale, scale, 0);
+        this.keys_rotated_pos_dict['&'] = GetRotatedQuad(enter_pos, this.keySizePx, angle);
+        this.keys_rotated_pos[27] = this.keys_rotated_pos_dict['&'];
         if (this.Enter_key.timer > 0f)
         {
             this.Enter_key.timer -= Time.deltaTime;
@@ -236,16 +255,20 @@ public class KeyboardUI : MonoBehaviour, IExperimentUI
 
         float space_offset_y = KEY_DISTANCE / MARKER_SIZE;
         float space_offset_x = -1.0f * KEY_DISTANCE / MARKER_SIZE;
-        Vector2 space_pos = scaled_marker_position + scaled_axis * (1.0f * KEY_DISTANCE / MARKER_SIZE + space_offset_x + DISTANCE_FROM_MARKER / MARKER_SIZE) + downward * space_offset_y;
+        Vector2 space_pos = scaled_marker_position + scaled_axis * (1.5f * KEY_DISTANCE / MARKER_SIZE + space_offset_x + DISTANCE_FROM_MARKER / MARKER_SIZE) + downward * space_offset_y;
         this.Space_key.rectTransform.anchoredPosition = space_pos;
         this.Space_key.rectTransform.localRotation = Quaternion.Euler(0, 0, angle * Mathf.Rad2Deg);
-        float space_scale = 1f / MARKER_SIZE * scaled_axis.magnitude / this.Space_key.rectTransform.sizeDelta.x;
-        this.Space_key.rectTransform.localScale = new Vector3(2.0f * KEY_DISTANCE * space_scale, 14.5f * space_scale, 0);
+        //float space_scale = KEY_SIZE / MARKER_SIZE * scaled_axis.magnitude / this.Space_key.rectTransform.sizeDelta.x;
+        this.Space_key.rectTransform.localScale = new Vector3(scale, scale, 0);
+        this.keys_rotated_pos_dict['%'] = GetRotatedQuad(space_pos, this.keySizePx, angle);
+        this.keys_rotated_pos[28] = this.keys_rotated_pos_dict['%'];
         if (this.Space_key.timer > 0f)
         {
             this.Space_key.timer -= Time.deltaTime;
         }
         Logger.Logging(new KeyLog('%', this.Space_key.rectTransform, KEY_DISTANCE));
+
+        this.keys_total_pos.Set(this.keys_rotated_pos);
 
         this.phrase.anchoredPosition = scaled_marker_position + scaled_axis * (-10.5f * KEY_DISTANCE / MARKER_SIZE + DISTANCE_FROM_MARKER / MARKER_SIZE) + downward * -4.5f * KEY_DISTANCE / MARKER_SIZE;
         this.phrase.localRotation = Quaternion.Euler(0, 0, angle * Mathf.Rad2Deg);
@@ -314,6 +337,41 @@ public class KeyboardUI : MonoBehaviour, IExperimentUI
         else applying_texture = this.normal_key_texture;
         this.Space_key.rectTransform.GetComponent<RawImage>().texture = applying_texture;
     }
+
+    public Vector2[] GetRotatedQuad(
+        Vector2 centerPx,
+        float keysizePx,
+        float angleRad
+    )
+    {
+        float h = keysizePx * 1.323f;
+
+        Vector2[] local = new Vector2[]
+        {
+        new Vector2(-h, -h),
+        new Vector2( h, -h),
+        new Vector2( h,  h),
+        new Vector2(-h,  h),
+        };
+
+        float cos = Mathf.Cos(angleRad);
+        float sin = Mathf.Sin(angleRad);
+
+        Vector2[] world = new Vector2[4];
+
+        for (int i = 0; i < 4; i++)
+        {
+            Vector2 p = local[i];
+            Vector2 r = new Vector2(
+                cos * p.x - sin * p.y,
+                sin * p.x + cos * p.y
+            );
+            world[i] = centerPx + r;
+        }
+
+        return world;
+    }
+
 
     public void CalcHoverKey(Vector2[] fingertipAnchoredPositions)
     {
