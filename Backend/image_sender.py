@@ -36,7 +36,7 @@ class ImageSender(Thread):
                     mask = np.zeros(image.shape[:2], dtype='uint8')
                 else:
                     mask = watershed.hand_mask(image, hand_landmarks)
-                    drawing_utility.landmarks(image, hand_landmarks)
+                    #drawing_utility.landmarks(image, hand_landmarks)
 
                 #RGB+mask=4 byte
                 concat_image = np.concatenate([image[:,:,[2,1,0]], mask[:,:,np.newaxis]], axis=2)

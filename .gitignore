@@ -87,6 +87,7 @@ crashlytics-build.properties
 Backend/.venv/
 Backend/logs/
 Backend/image_test/
+Backend/image/
 
 button_arai10mm_6464/
 buttontest_sekiya10mm/

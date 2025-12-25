@@ -44,7 +44,7 @@ detector = TouchDetector(sh_image_and_landmarks, sh_touches, sh_framebuffer, sh_
 tracker.start()
 detector.start()
 
-viewer = TouchViewer()
+#viewer = TouchViewer()
 frame_id = 0
 
 try:
@@ -61,7 +61,7 @@ try:
         sh_framebuffer.set(frame_id, frame)
         frame_id += 1
 
-        viewer.replot()
+        #viewer.replot()
 
         time.sleep(0.02)
 

@@ -67,7 +67,6 @@ public class KeyInfoSender : ThreadRunner
                 using (MemoryStream ms = new MemoryStream())
                 {
                     ms.Write(MAGIC, 0, MAGIC.Length);
-
                     ms.Write(BitConverter.GetBytes(fId), 0, 4); // uint32
 
                     // ---- 座標データ ----

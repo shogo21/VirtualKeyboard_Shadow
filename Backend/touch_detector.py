@@ -62,22 +62,28 @@ class TouchDetector(Thread):
             logging('TouchDetectorLoopLog', None)
             image_and_landmarks = self.sh_image_and_landmarks.try_get()
             count_keys = self.sh_keys_pos_from_unity.try_get()
-            if count_keys is not None:
+            key_images = []
+            if count_keys is None:
+                time.sleep(0.02)
+            else:
                 count, keys_pos = count_keys
-            #test_data = self.sh_framebuffer.get_by_frame_id(count)
-            #print(f"touchdetector: {count}")
-            #if test_data is not None:
-                #fid, img = test_data
-                #print(f"get same {fid}")
-                #if (fid % 10 == 0):
-                    #cv2.imwrite(f"./image_test/frame_{fid}.png", img)
-                    #print(f"Saved frame {fid}")
-            """test_data = self.sh_framebuffer.pop_oldest()
-            if test_data is not None:
-                fid, img = test_data
-                if (fid % 10 == 0):
-                    cv2.imwrite(f"./image_test/frame_{fid}.png", img)
-                    print(f"Saved frame {fid}")"""
+                id_image = self.sh_framebuffer.get_by_frame_id(count)
+                if id_image is not None:
+                    fid, img = id_image
+                    """if (fid % 10 == 0):
+                        cv2.imwrite(f"./image_test/frame_{fid}.png", img)"""
+                    for i, key_corner_pos in enumerate(keys_pos):
+                        cropped_image = preprocessing.crop_key_with_padding(img, key_corner_pos)
+                        if cropped_image is None:
+                            print("cropped_image is None")
+                            #logging('TouchDetectLog', None)
+                            continue
+                        else:
+                            key_images.append(cropped_image)
+                            if (fid % 10 == 0):
+                                cv2.imwrite(f"./image_test/cropped_image_{fid}frame_{i}key.png", cropped_image)
+                                #print(key_corner_pos)
+                                print(f"Saved cropped_image_{fid}frame_{i}key")
 
             if image_and_landmarks is None:
                 time.sleep(0.02)
@@ -99,11 +105,8 @@ class TouchDetector(Thread):
                 logging('TouchDetectLog', [t[int((WINDOW_SIZE-1)/2)].item() for t in self.output_float])
                 #print(t[int((WINDOW_SIZE-1)/2)].item() for t in self.output_float])
                 self.sh_touches.set([t[int((WINDOW_SIZE-1)/2)] > 0.5 for t in self.output])
-                add_result([t[int((WINDOW_SIZE-1)/2)] for t in self.output_float])
+                #add_result([t[int((WINDOW_SIZE-1)/2)] for t in self.output_float])
 
-                #logging('TouchDetectLog', [t[0][0][0].item() for t in touches])
-                #self.sh_touches.set([t[0][0][0] > 0.5 for t in touches])
-                #add_result([t[0][0][0] for t in touches])
         print('TOUCH DETECTOR END')
     
     def stop(self):

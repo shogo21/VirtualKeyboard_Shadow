@@ -9,6 +9,8 @@ POS = mp.solutions.hands.HandLandmark
 finger_tip_id = [POS.INDEX_FINGER_TIP, POS.MIDDLE_FINGER_TIP, POS.RING_FINGER_TIP, POS.PINKY_TIP]
 finger_dip_id = [POS.INDEX_FINGER_DIP, POS.MIDDLE_FINGER_DIP, POS.RING_FINGER_DIP, POS.PINKY_DIP]
 
+OUT_SIZE = 64
+
 def calc_bone_length(landmarks, width, height, fingertip_id):
     length = 0
     for joint in [0,1,2]:
@@ -62,3 +64,41 @@ def crop(image, landmarks):
             return None
     
     return cropped_images
+
+
+def crop_key_with_padding(
+    base_img,        # numpy array (H,W,3) BGR or RGB
+    corners,         # [(x,y), (x,y), (x,y), (x,y)]
+):
+
+    # 入力点
+    src = np.array([
+        corners[0],  # 左上
+        corners[3],  # 右上
+        corners[2],  # 右下
+        corners[1],  # 左下
+    ], dtype=np.float32)
+
+    # 出力先（正方形）
+    dst = np.array([
+        [0, OUT_SIZE-1],
+        [OUT_SIZE-1, OUT_SIZE-1],
+        [OUT_SIZE-1, 0],
+        [0, 0]
+    ], dtype=np.float32)
+
+    # 射影変換行列
+    M = cv2.getPerspectiveTransform(src, dst)
+
+    # Warp（画像外は黒で埋める）
+    warped = cv2.warpPerspective(
+        base_img,
+        M,
+        (OUT_SIZE, OUT_SIZE),
+        flags=cv2.INTER_LINEAR,
+        borderMode=cv2.BORDER_CONSTANT,
+        borderValue=(0, 0, 0)
+    )
+
+    return warped
+
