@@ -41,29 +41,43 @@ class KeyInfoReceiver(Thread):
     def read_one_frame(self):
         ok = self.read_until_magic()
         if not ok:
-            return None, None
+            return None, None, None, None
 
         raw_frame_id = self.read_exact(4)
         if not raw_frame_id:
-            return None, None
+            return None, None, None, None
         frame_id = struct.unpack("<I", raw_frame_id)[0]
 
+        raw_keysize = self.read_exact(4)
+        if not raw_keysize:
+            return None, None, None, None
+        keysize = struct.unpack("<f", raw_keysize)[0]
+
+        angles = []
+        for _ in range(2):
+            angle_x = self.read_exact(4)
+            if not angle_x:
+                return None, None, None, None
+            anglex = struct.unpack("<f", angle_x)[0]
+            angle_y = self.read_exact(4)
+            if not angle_y:
+                return None, None, None, None
+            angley = struct.unpack("<f", angle_y)[0]
+            angles.append((anglex, angley))
+            
         keys = []
         for _ in range(29):
-            corners = []
-            for _ in range(4):
-                x = self.read_exact(4)
-                if not x:
-                    return None, None
-                pos_x = struct.unpack("<f", x)[0]
-                y = self.read_exact(4)
-                if not y:
-                    return None, None
-                pos_y = struct.unpack("<f", y)[0]
-                corners.append((pos_x, pos_y))
-            keys.append(corners)
+            x = self.read_exact(4)
+            if not x:
+                return None, None, None, None
+            pos_x = struct.unpack("<f", x)[0]
+            y = self.read_exact(4)
+            if not y:
+                return None, None, None, None
+            pos_y = struct.unpack("<f", y)[0]
+            keys.append((pos_x, pos_y))
 
-        return frame_id, keys
+        return frame_id, keysize, angles, keys
 
     def run(self):
         connected = False
@@ -81,12 +95,14 @@ class KeyInfoReceiver(Thread):
         print("KeyInfo Receiver START.")
 
         while not self.stop_flg:
-            frame_id, keys = self.read_one_frame()
-            #print(f"frame_id_receiver: {frame_id}")
+            frame_id, keysize, angles, keys = self.read_one_frame()
+            print(f"frame_id_receiver: {frame_id}")
+            print(f"keysize_receiver: {keysize}")
+            for i in range(2):
+                print(f"{i}angles: {angles[i]}")
             for i in range(29):
-                for j in range(4):
-                    print(f"{i}key {j}corner: {keys[i][j]}")
-            self.sh_keys_pos_from_unity.set((frame_id, keys))
+                print(f"{i}key: {keys[i]}")
+            #self.sh_keys_pos_from_unity.set((frame_id, keys))
             
 
         print("KeyInfo Receiver STOP")

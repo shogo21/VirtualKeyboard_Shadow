@@ -37,8 +37,6 @@ public class KeyboardUI : MonoBehaviour, IExperimentUI
     private Camera cam;
 
     private Dictionary<char, KeyState> keys = new Dictionary<char, KeyState>();
-    //private Dictionary<char, Vector2[]> keys_rotated_pos_dict = new Dictionary<char, Vector2[]>();
-    private Dictionary<char, Vector3[]> keys_rotated_pos_dict = new Dictionary<char, Vector3[]>();
     private KeyState SD_key, up_SD_key, Enter_key, Space_key;
 
     private char[] hovered_chars = { ' ', ' ', ' ', ' ' };
@@ -66,13 +64,15 @@ public class KeyboardUI : MonoBehaviour, IExperimentUI
     private SharedData<uint> frame_id = new SharedData<uint>();
     private float scale, keySizePx;
     private int key_count;
-    private Vector3 center = new Vector3();
+    private SharedData<float> keysize_Px = new SharedData<float>();
 
-    private Vector2[][] keys_rotated_pos = new Vector2[29][];
-    private SharedData<Vector2[][]> keys_total_pos = new SharedData<Vector2[][]>();
+    private Vector2[] keys_center_pos = new Vector2[29];
+    private Vector2[] keys_angle = new Vector2[2];
+    private SharedData<Vector2[]> keys_total_pos = new SharedData<Vector2[]>();
+    private SharedData<Vector2[]> keys_angle_total = new SharedData<Vector2[]>();
     private float imgH = 480;
     private float imgW = 640;
-    private float scale_finger = 5.323f;
+    private float scale_finger = 1.323f;
 
     bool input_accepting = false;
 
@@ -109,34 +109,25 @@ public class KeyboardUI : MonoBehaviour, IExperimentUI
             key_char.text = "" + (char)('A' + i);
             key_char.fontSize = FONT_SIZE;
             this.keys.Add((char)('A' + i), new KeyState(rt));
-            this.keys_rotated_pos_dict.Add((char)('A' + i), new Vector3[4]);
         }
-
-        /*RectTransform sd_rt = Instantiate(this.keyPrefab, Vector3.zero, new Quaternion(0, 0, 0, 0), this.transform).GetComponent<RectTransform>();
-        sd_rt.localPosition = Vector3.zero;
-        sd_rt.Find("Char").GetComponent<Text>().text = "";
-        this.SD_key = new KeyState(sd_rt);*/
 
         RectTransform up_sd_rt = Instantiate(this.keyPrefab, Vector3.zero, new Quaternion(0, 0, 0, 0), this.transform).GetComponent<RectTransform>();
         up_sd_rt.localPosition = Vector3.zero;
         up_sd_rt.Find("Char").GetComponent<UnityEngine.UI.Text>().text = "Del";
         up_sd_rt.Find("Char").GetComponent<UnityEngine.UI.Text>().fontSize = 80;
         this.up_SD_key = new KeyState(up_sd_rt);
-        this.keys_rotated_pos_dict.Add('#', new Vector3[4]); 
 
         RectTransform enter_rt = Instantiate(this.keyPrefab, Vector3.zero, new Quaternion(0, 0, 0, 0), this.transform).GetComponent<RectTransform>();
         enter_rt.localPosition = Vector3.zero;
         enter_rt.Find("Char").GetComponent<UnityEngine.UI.Text>().text = "Ent";
         enter_rt.Find("Char").GetComponent<UnityEngine.UI.Text>().fontSize = 80;
         this.Enter_key = new KeyState(enter_rt);
-        this.keys_rotated_pos_dict.Add('&', new Vector3[4]);
 
         RectTransform space_rt = Instantiate(this.keyPrefab, Vector3.zero, new Quaternion(0, 0, 0, 0), this.transform).GetComponent<RectTransform>();
         space_rt.localPosition = Vector3.zero;
         space_rt.Find("Char").GetComponent<UnityEngine.UI.Text>().text = "Sp";
         space_rt.Find("Char").GetComponent<UnityEngine.UI.Text>().fontSize = 80;
         this.Space_key = new KeyState(space_rt);
-        this.keys_rotated_pos_dict.Add('%', new Vector3[4]);
 
 
         this.normal_key_texture = Resources.Load<Texture2D>("Images/black_box");
@@ -144,15 +135,7 @@ public class KeyboardUI : MonoBehaviour, IExperimentUI
         this.touching_key_texture = Resources.Load<Texture2D>("Images/green_box");
         this.disabled_key_texture = Resources.Load<Texture2D>("Images/gray_out_box");
 
-        for (int i = 0; i < 29; i++)
-        {
-            this.keys_rotated_pos[i] = new Vector2[4];
-        }
-
-        // ここで初めて Set
-        this.keys_total_pos.Set(this.keys_rotated_pos);
-
-        this.keyinfosender = new KeyInfoSender(this.frame_id, this.keys_total_pos);
+        this.keyinfosender = new KeyInfoSender(this.frame_id, this.keysize_Px, this.keys_angle_total, this.keys_total_pos);
         this.keyinfosender.Start();
 
         this.StopTyping();
@@ -188,6 +171,14 @@ public class KeyboardUI : MonoBehaviour, IExperimentUI
         float angle = Mathf.Atan2(-scaled_axis.y, -scaled_axis.x);
         this.key_count = 0;
 
+        Vector2 uxuy = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle));  // 右方向ベクトル
+        Vector2 vxvy = new Vector2(-Mathf.Sin(angle), Mathf.Cos(angle)); // 下方向ベクトル（右方向に垂直）
+        uxuy.Normalize();
+        vxvy.Normalize();
+        this.keys_angle[0] = uxuy;
+        this.keys_angle[1] = vxvy;
+        this.keys_angle_total.Set(this.keys_angle);
+
         for (int i = 0; i < keys_array.Length; i++)
         {
             string keys_row = keys_array[i];
@@ -203,30 +194,12 @@ public class KeyboardUI : MonoBehaviour, IExperimentUI
                 this.keys[target_char].rectTransform.localRotation = Quaternion.Euler(0, 0, angle * Mathf.Rad2Deg);
 
                 scale = KEY_SIZE / MARKER_SIZE * scaled_axis.magnitude / this.keys[target_char].rectTransform.sizeDelta.x;
-                this.keys[target_char].rectTransform.localScale = new Vector3(scale, scale, 0);
-                //this.keySizePx = this.keys[target_char].rectTransform.sizeDelta.x * this.keys[target_char].rectTransform.localScale.x;
-                //this.keys_rotated_pos_dict[target_char] = GetRotatedQuad(pos, this.keySizePx, angle);
-                //this.keys_rotated_pos[key_count] = this.keys_rotated_pos_dict[target_char];
-                if (!this.keys_rotated_pos_dict.ContainsKey(target_char))
-                {
-                    this.keys_rotated_pos_dict[target_char] = new Vector3[4];
-                }
-                this.keys[target_char].rectTransform.GetWorldCorners(this.keys_rotated_pos_dict[target_char]);
-                this.center =(this.keys_rotated_pos_dict[target_char][0] + this.keys_rotated_pos_dict[target_char][1] + this.keys_rotated_pos_dict[target_char][2] + this.keys_rotated_pos_dict[target_char][3]) * 0.25f;
-                Vector2[] screenCorners = new Vector2[4];
-                for (int k = 0; k < 4; k++)
-                {
-                    this.keys_rotated_pos_dict[target_char][k] = this.center + (this.keys_rotated_pos_dict[target_char][k] - this.center) * this.scale_finger;
-                    Vector3 sp = this.cam.WorldToScreenPoint(this.keys_rotated_pos_dict[target_char][k]);
-                    screenCorners[k] = new Vector2(sp.x, sp.y);
-                }
-                Vector2[] imagePx = new Vector2[4];
-                for (int k = 0; k < 4; k++)
-                {
-                    imagePx[k] = new Vector2(screenCorners[k].x * (this.imgW / Screen.width), (Screen.height - screenCorners[k].y) * (this.imgH / Screen.height));
-                    //UnityLogger.Log($"{target_char} corner {k}: {this.imagePx[k]}");
-                }
-                this.keys_rotated_pos[key_count] = imagePx;
+                this.keys[target_char].rectTransform.localScale = new Vector3(scale, scale, 1);
+
+                //Vector3 screen_keycenter_Pos = this.cam.WorldToScreenPoint(this.keys[target_char].rectTransform.position); // Screen座標（左下原点）
+                //Vector2 keycenter_Pos = new Vector2(screen_keycenter_Pos.x * (this.imgW / Screen.width), (Screen.height - screen_keycenter_Pos.y) * (this.imgH / Screen.height));
+                Vector2 keycenter_Pos = new Vector2(pos.x + this.imgW * 0.5f, this.imgH * 0.5f - pos.y);
+                this.keys_center_pos[this.key_count] = keycenter_Pos;
                 this.key_count += 1;
                 /*for (int k = 0; k < 4; k++)
                 {
@@ -245,29 +218,11 @@ public class KeyboardUI : MonoBehaviour, IExperimentUI
         this.up_SD_key.rectTransform.anchoredPosition = up_sd_pos;
         this.up_SD_key.rectTransform.localRotation = Quaternion.Euler(0, 0, angle * Mathf.Rad2Deg);
         //float up_sd_scale = KEY_SIZE / MARKER_SIZE * scaled_axis.magnitude / this.up_SD_key.rectTransform.sizeDelta.x;
-        this.up_SD_key.rectTransform.localScale = new Vector3(scale, scale, 0);
-        //this.keys_rotated_pos_dict['#'] = GetRotatedQuad(up_sd_pos, this.keySizePx, angle);
-        //this.keys_rotated_pos[26] = this.keys_rotated_pos_dict['#'];
-        //Canvas.ForceUpdateCanvases();
-        if (!this.keys_rotated_pos_dict.ContainsKey('#'))
-        {
-            this.keys_rotated_pos_dict['#'] = new Vector3[4];
-        }
-        this.up_SD_key.rectTransform.GetWorldCorners(this.keys_rotated_pos_dict['#']);
-        this.center = (this.keys_rotated_pos_dict['#'][0] + this.keys_rotated_pos_dict['#'][1] + this.keys_rotated_pos_dict['#'][2] + this.keys_rotated_pos_dict['#'][3]) * 0.25f;
-        Vector2[] screenCorners_up_sd = new Vector2[4];
-        for (int k = 0; k < 4; k++)
-        {
-            this.keys_rotated_pos_dict['#'][k] = this.center + (this.keys_rotated_pos_dict['#'][k] - this.center) * this.scale_finger;
-            Vector3 sp = this.cam.WorldToScreenPoint(this.keys_rotated_pos_dict['#'][k]);
-            screenCorners_up_sd[k] = new Vector2(sp.x, sp.y);
-        }
-        Vector2[] imagePx_up_sd = new Vector2[4];
-        for (int k = 0; k < 4; k++)
-                {
-            imagePx_up_sd[k] = new Vector2(screenCorners_up_sd[k].x, Screen.height - screenCorners_up_sd[k].y);
-        }
-        this.keys_rotated_pos[26] = imagePx_up_sd;
+        this.up_SD_key.rectTransform.localScale = new Vector3(scale, scale, 1);
+        //Vector3 screen_upsd_center_Pos = this.cam.WorldToScreenPoint(this.up_SD_key.rectTransform.position); // Screen座標（左下原点）
+        //Vector2 upsd_center_Pos = new Vector2(screen_upsd_center_Pos.x * (this.imgW / Screen.width), (Screen.height - screen_upsd_center_Pos.y) * (this.imgH / Screen.height));
+        Vector2 upsd_center_Pos = new Vector2(up_sd_pos.x + this.imgW * 0.5f, this.imgH * 0.5f - up_sd_pos.y);
+        this.keys_center_pos[26] = upsd_center_Pos;
         /*for (int k = 0; k < 4; k++)
         {
             UnityLogger.Log($"# corner {k}: {this.keys_rotated_pos[26][k]}");
@@ -283,28 +238,10 @@ public class KeyboardUI : MonoBehaviour, IExperimentUI
         this.Enter_key.rectTransform.localRotation = Quaternion.Euler(0, 0, angle * Mathf.Rad2Deg);
         //float enter_scale = KEY_SIZE / MARKER_SIZE * scaled_axis.magnitude / this.Enter_key.rectTransform.sizeDelta.x;
         this.Enter_key.rectTransform.localScale = new Vector3(scale, scale, 1);
-        //this.keys_rotated_pos_dict['&'] = GetRotatedQuad(enter_pos, this.keySizePx, angle);
-        //this.keys_rotated_pos[27] = this.keys_rotated_pos_dict['&'];
-        //Canvas.ForceUpdateCanvases();
-        if (!this.keys_rotated_pos_dict.ContainsKey('&'))
-        {
-            this.keys_rotated_pos_dict['&'] = new Vector3[4];
-        }
-        this.Enter_key.rectTransform.GetWorldCorners(this.keys_rotated_pos_dict['&']);
-        this.center = (this.keys_rotated_pos_dict['&'][0] + this.keys_rotated_pos_dict['&'][1] + this.keys_rotated_pos_dict['&'][2] + this.keys_rotated_pos_dict['&'][3]) * 0.25f;
-        Vector2[] screenCorners_enter = new Vector2[4];
-        for (int k = 0; k < 4; k++)
-        {
-            this.keys_rotated_pos_dict['&'][k] = this.center + (this.keys_rotated_pos_dict['&'][k] - this.center) * this.scale_finger;
-            Vector3 sp = this.cam.WorldToScreenPoint(this.keys_rotated_pos_dict['&'][k]);
-            screenCorners_enter[k] = new Vector2(sp.x, sp.y);
-        }
-        Vector2[] imagePx_enter = new Vector2[4];
-        for (int k = 0; k < 4; k++)
-        {
-            imagePx_enter[k] = new Vector2(screenCorners_enter[k].x, Screen.height - screenCorners_enter[k].y);
-        }
-        this.keys_rotated_pos[27] = imagePx_enter;
+        //Vector3 screen_enter_center_Pos = this.cam.WorldToScreenPoint(this.Enter_key.rectTransform.position); // Screen座標（左下原点）
+        //Vector2 enter_center_Pos = new Vector2(screen_enter_center_Pos.x * (this.imgW / Screen.width), (Screen.height - screen_enter_center_Pos.y) * (this.imgH / Screen.height));
+        Vector2 enter_center_Pos = new Vector2(enter_pos.x + this.imgW * 0.5f, this.imgH * 0.5f - enter_pos.y);
+        this.keys_center_pos[27] = enter_center_Pos;
         if (this.Enter_key.timer > 0f)
         {
             this.Enter_key.timer -= Time.deltaTime;
@@ -317,36 +254,22 @@ public class KeyboardUI : MonoBehaviour, IExperimentUI
         this.Space_key.rectTransform.anchoredPosition = space_pos;
         this.Space_key.rectTransform.localRotation = Quaternion.Euler(0, 0, angle * Mathf.Rad2Deg);
         //float space_scale = KEY_SIZE / MARKER_SIZE * scaled_axis.magnitude / this.Space_key.rectTransform.sizeDelta.x;
-        this.Space_key.rectTransform.localScale = new Vector3(scale, scale, 0);
-        //this.keys_rotated_pos_dict['%'] = GetRotatedQuad(space_pos, this.keySizePx, angle);
-        //this.keys_rotated_pos[28] = this.keys_rotated_pos_dict['%'];
-        //Canvas.ForceUpdateCanvases();
-        if (!this.keys_rotated_pos_dict.ContainsKey('%'))
-        {
-            this.keys_rotated_pos_dict['%'] = new Vector3[4];
-        }
-        this.Space_key.rectTransform.GetWorldCorners(this.keys_rotated_pos_dict['%']);
-        this.center = (this.keys_rotated_pos_dict['%'][0] + this.keys_rotated_pos_dict['%'][1] + this.keys_rotated_pos_dict['%'][2] + this.keys_rotated_pos_dict['%'][3]) * 0.25f;
-        Vector2[] screenCorners_space = new Vector2[4];
-        for (int k = 0; k < 4; k++)
-        {
-            this.keys_rotated_pos_dict['%'][k] = this.center + (this.keys_rotated_pos_dict['%'][k] - this.center) * this.scale_finger;
-            Vector3 sp = this.cam.WorldToScreenPoint(this.keys_rotated_pos_dict['%'][k]);
-            screenCorners_space[k] = new Vector2(sp.x, sp.y);
-        }
-        Vector2[] imagePx_space = new Vector2[4];
-        for (int k = 0; k < 4; k++)
-        {
-            imagePx_space[k] = new Vector2(screenCorners_space[k].x, Screen.height - screenCorners_space[k].y);
-        }
-        this.keys_rotated_pos[28] = imagePx_space;
+        this.Space_key.rectTransform.localScale = new Vector3(scale, scale, 1);
+        //Vector3 screen_space_center_Pos = this.cam.WorldToScreenPoint(this.Space_key.rectTransform.position); // Screen座標（左下原点）
+        //Vector2 space_center_Pos = new Vector2(screen_space_center_Pos.x * (this.imgW / Screen.width), (Screen.height - screen_space_center_Pos.y) * (this.imgH / Screen.height));
+        Vector2 space_center_Pos = new Vector2(space_pos.x + this.imgW * 0.5f, this.imgH * 0.5f - space_pos.y);
+        this.keys_center_pos[28] = space_center_Pos;
         if (this.Space_key.timer > 0f)
         {
             this.Space_key.timer -= Time.deltaTime;
         }
         Logger.Logging(new KeyLog('%', this.Space_key.rectTransform, KEY_DISTANCE));
 
-        this.keys_total_pos.Set(this.keys_rotated_pos);
+        this.keySizePx = this.Space_key.rectTransform.sizeDelta.x * this.Space_key.rectTransform.localScale.x;
+        this.keySizePx = this.keySizePx * (this.imgW / Screen.width);
+        this.keySizePx = this.keySizePx * scale_finger * 2.0f;
+        this.keysize_Px.Set(this.keySizePx);
+        this.keys_total_pos.Set(this.keys_center_pos);
 
         this.phrase.anchoredPosition = scaled_marker_position + scaled_axis * (-10.5f * KEY_DISTANCE / MARKER_SIZE + DISTANCE_FROM_MARKER / MARKER_SIZE) + downward * -4.5f * KEY_DISTANCE / MARKER_SIZE;
         this.phrase.localRotation = Quaternion.Euler(0, 0, angle * Mathf.Rad2Deg);

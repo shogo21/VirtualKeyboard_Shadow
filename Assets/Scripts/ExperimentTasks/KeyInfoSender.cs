@@ -11,26 +11,23 @@ public class KeyInfoSender : ThreadRunner
 {
     private NamedPipeServer pipe;
     private SharedData<uint> frame_id;
-    private SharedData<Vector2[][]> keys_pos;
+    private SharedData<float> keysize_Px;
+    private SharedData<Vector2[]> keys_angle;
+    private SharedData<Vector2[]> keys_pos;
     private string pipeName = "KeyInfoPipe";
     private readonly object sendLock = new object();
     static readonly byte[] MAGIC = Encoding.ASCII.GetBytes("KSF1PIPE");
     private uint payloadSize = 4 + 29 * 4 * 2 * 4;
 
 
-    public KeyInfoSender(SharedData<uint> frame_id, SharedData<Vector2[][]> keys_pos)
+    public KeyInfoSender(SharedData<uint> frame_id, SharedData<float> keysize_Px, SharedData<Vector2[]> keys_angle, SharedData<Vector2[]> keys_pos)
     {
         this.frame_id = frame_id;
+        this.keysize_Px = keysize_Px;
+        this.keys_angle = keys_angle;
         this.keys_pos = keys_pos;
         this.pipe = new NamedPipeServer(this.pipeName);
     }
-
-    /*public void EnqueueFrame(List<byte[]> cropsBytes)
-    {
-        // 受け取ったフレームをキューに積む（スレッド安全）
-        //this.framesQueue.Enqueue(cropsBytes);
-        this.latestFrame = cropsBytes; // 上書き
-    }*/
 
     protected override void Run()
     {
@@ -48,16 +45,15 @@ public class KeyInfoSender : ThreadRunner
             if (token.IsCancellationRequested) break;
             if (this.pipe.status == NamedPipeServer.Status.Connected)
             {
-                if (this.frame_id.TryGet(out uint fid) && this.keys_pos.TryGet(out Vector2[][] keys_rotated_pos))
+                if (this.frame_id.TryGet(out uint fid) && this.keysize_Px.TryGet(out float keysize) && this.keys_angle.TryGet(out Vector2[] angle) && this.keys_pos.TryGet(out Vector2[] keys_center_pos))
                 {
-                    //UnityLogger.Log("frame_id: " + fid);
-                    TrySendKeyPos(fid, keys_rotated_pos);
+                    TrySendKeyPos(fid, keysize, angle, keys_center_pos);
                 }
             }
         }
     }
 
-    public void TrySendKeyPos(uint fId, Vector2[][] keys_total_pos)
+    public void TrySendKeyPos(uint fId, float sizeKey, Vector2[] angle_key, Vector2[] keys_total_pos)
     {
         // ---- 二重送信・割り込み防止 ----
         lock (sendLock)
@@ -68,26 +64,26 @@ public class KeyInfoSender : ThreadRunner
                 {
                     ms.Write(MAGIC, 0, MAGIC.Length);
                     ms.Write(BitConverter.GetBytes(fId), 0, 4); // uint32
+                    ms.Write(BitConverter.GetBytes(sizeKey), 0, 4);
+
+                    for (int i = 0; i < angle_key.Length; i++)
+                    {
+                        ms.Write(BitConverter.GetBytes(angle_key[i].x), 0, 4);
+                        ms.Write(BitConverter.GetBytes(angle_key[i].y), 0, 4);
+                    }
 
                     // ---- 座標データ ----
                     for (int i = 0; i < keys_total_pos.Length; i++)
                     {
-                        Vector2[] corners = keys_total_pos[i];
-                        if (corners == null || corners.Length != 4)
+                        if (keys_total_pos[i] == null)
                         {
-                            // 無効キー → (0,0) を4頂点分送る
-                            for (int j = 0; j < 4; j++)
-                            {
-                                ms.Write(BitConverter.GetBytes(0f), 0, 4);
-                                ms.Write(BitConverter.GetBytes(0f), 0, 4);
-                            }
-                            continue;
+                            ms.Write(BitConverter.GetBytes(0f), 0, 4);
+                            ms.Write(BitConverter.GetBytes(0f), 0, 4);
                         }
-
-                        for (int j = 0; j < 4; j++)
+                        else
                         {
-                            ms.Write(BitConverter.GetBytes(corners[j].x), 0, 4);
-                            ms.Write(BitConverter.GetBytes(corners[j].y), 0, 4);
+                            ms.Write(BitConverter.GetBytes(keys_total_pos[i].x), 0, 4);
+                            ms.Write(BitConverter.GetBytes(keys_total_pos[i].y), 0, 4);
                         }
                     }
 
