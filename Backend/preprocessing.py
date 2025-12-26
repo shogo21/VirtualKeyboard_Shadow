@@ -68,7 +68,7 @@ def crop(image, landmarks):
 
 def crop_key_with_padding(
     base_img,        # numpy array (H,W,3) BGR or RGB
-    corners,         # [(x,y), (x,y), (x,y), (x,y)]
+    corners         # [(x,y), (x,y), (x,y), (x,y)]
 ):
 
     # 入力点
@@ -102,3 +102,32 @@ def crop_key_with_padding(
 
     return warped
 
+"""def crop_key_image(base_img, corners):
+    
+    src_pts = np.array([
+        corners[1],
+        corners[2],
+        corners[3],
+        corners[0]
+    ], dtype=np.float32)
+
+    dst_pts = np.array([
+        [0, 0],
+        [OUT_SIZE-1, 0],
+        [OUT_SIZE-1, OUT_SIZE-1],
+        [0, OUT_SIZE-1]
+    ], dtype=np.float32)
+
+    H, _ = cv2.findHomography(src_pts, dst_pts)
+    
+    # 画像切り出し
+    cropped = cv2.warpPerspective(
+        base_img,
+        H,
+        (OUT_SIZE, OUT_SIZE),
+        flags=cv2.INTER_LINEAR,
+        borderMode=cv2.BORDER_CONSTANT,
+        borderValue=(0, 0, 0)
+    )
+    
+    return cropped"""

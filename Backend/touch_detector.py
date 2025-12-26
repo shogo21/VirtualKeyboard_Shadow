@@ -70,8 +70,8 @@ class TouchDetector(Thread):
                 id_image = self.sh_framebuffer.get_by_frame_id(count)
                 if id_image is not None:
                     fid, img = id_image
-                    """if (fid % 10 == 0):
-                        cv2.imwrite(f"./image_test/frame_{fid}.png", img)"""
+                    if (fid % 10 == 0):
+                        cv2.imwrite(f"./image_test/frame_{fid}.png", img)
                     for i, key_corner_pos in enumerate(keys_pos):
                         cropped_image = preprocessing.crop_key_with_padding(img, key_corner_pos)
                         if cropped_image is None:

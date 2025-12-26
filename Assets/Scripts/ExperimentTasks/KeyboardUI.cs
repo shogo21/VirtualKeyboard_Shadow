@@ -212,11 +212,11 @@ public class KeyboardUI : MonoBehaviour, IExperimentUI
                     this.keys_rotated_pos_dict[target_char] = new Vector3[4];
                 }
                 this.keys[target_char].rectTransform.GetWorldCorners(this.keys_rotated_pos_dict[target_char]);
-                this.center =(this.keys_rotated_pos_dict[target_char][0] + this.keys_rotated_pos_dict[target_char][1] + this.keys_rotated_pos_dict[target_char][2] + this.keys_rotated_pos_dict[target_char][3]) * 0.25f;
+                //this.center =(this.keys_rotated_pos_dict[target_char][0] + this.keys_rotated_pos_dict[target_char][1] + this.keys_rotated_pos_dict[target_char][2] + this.keys_rotated_pos_dict[target_char][3]) * 0.25f;
                 Vector2[] screenCorners = new Vector2[4];
                 for (int k = 0; k < 4; k++)
                 {
-                    this.keys_rotated_pos_dict[target_char][k] = this.center + (this.keys_rotated_pos_dict[target_char][k] - this.center) * this.scale_finger;
+                    //this.keys_rotated_pos_dict[target_char][k] = this.center + (this.keys_rotated_pos_dict[target_char][k] - this.center);
                     Vector3 sp = this.cam.WorldToScreenPoint(this.keys_rotated_pos_dict[target_char][k]);
                     screenCorners[k] = new Vector2(sp.x, sp.y);
                 }
@@ -254,11 +254,11 @@ public class KeyboardUI : MonoBehaviour, IExperimentUI
             this.keys_rotated_pos_dict['#'] = new Vector3[4];
         }
         this.up_SD_key.rectTransform.GetWorldCorners(this.keys_rotated_pos_dict['#']);
-        this.center = (this.keys_rotated_pos_dict['#'][0] + this.keys_rotated_pos_dict['#'][1] + this.keys_rotated_pos_dict['#'][2] + this.keys_rotated_pos_dict['#'][3]) * 0.25f;
+        //this.center = (this.keys_rotated_pos_dict['#'][0] + this.keys_rotated_pos_dict['#'][1] + this.keys_rotated_pos_dict['#'][2] + this.keys_rotated_pos_dict['#'][3]) * 0.25f;
         Vector2[] screenCorners_up_sd = new Vector2[4];
         for (int k = 0; k < 4; k++)
         {
-            this.keys_rotated_pos_dict['#'][k] = this.center + (this.keys_rotated_pos_dict['#'][k] - this.center) * this.scale_finger;
+            //this.keys_rotated_pos_dict['#'][k] = this.center + (this.keys_rotated_pos_dict['#'][k] - this.center) * this.scale_finger;
             Vector3 sp = this.cam.WorldToScreenPoint(this.keys_rotated_pos_dict['#'][k]);
             screenCorners_up_sd[k] = new Vector2(sp.x, sp.y);
         }
@@ -291,11 +291,11 @@ public class KeyboardUI : MonoBehaviour, IExperimentUI
             this.keys_rotated_pos_dict['&'] = new Vector3[4];
         }
         this.Enter_key.rectTransform.GetWorldCorners(this.keys_rotated_pos_dict['&']);
-        this.center = (this.keys_rotated_pos_dict['&'][0] + this.keys_rotated_pos_dict['&'][1] + this.keys_rotated_pos_dict['&'][2] + this.keys_rotated_pos_dict['&'][3]) * 0.25f;
+        //this.center = (this.keys_rotated_pos_dict['&'][0] + this.keys_rotated_pos_dict['&'][1] + this.keys_rotated_pos_dict['&'][2] + this.keys_rotated_pos_dict['&'][3]) * 0.25f;
         Vector2[] screenCorners_enter = new Vector2[4];
         for (int k = 0; k < 4; k++)
         {
-            this.keys_rotated_pos_dict['&'][k] = this.center + (this.keys_rotated_pos_dict['&'][k] - this.center) * this.scale_finger;
+            //this.keys_rotated_pos_dict['&'][k] = this.center + (this.keys_rotated_pos_dict['&'][k] - this.center) * this.scale_finger;
             Vector3 sp = this.cam.WorldToScreenPoint(this.keys_rotated_pos_dict['&'][k]);
             screenCorners_enter[k] = new Vector2(sp.x, sp.y);
         }
@@ -326,11 +326,11 @@ public class KeyboardUI : MonoBehaviour, IExperimentUI
             this.keys_rotated_pos_dict['%'] = new Vector3[4];
         }
         this.Space_key.rectTransform.GetWorldCorners(this.keys_rotated_pos_dict['%']);
-        this.center = (this.keys_rotated_pos_dict['%'][0] + this.keys_rotated_pos_dict['%'][1] + this.keys_rotated_pos_dict['%'][2] + this.keys_rotated_pos_dict['%'][3]) * 0.25f;
+        //this.center = (this.keys_rotated_pos_dict['%'][0] + this.keys_rotated_pos_dict['%'][1] + this.keys_rotated_pos_dict['%'][2] + this.keys_rotated_pos_dict['%'][3]) * 0.25f;
         Vector2[] screenCorners_space = new Vector2[4];
         for (int k = 0; k < 4; k++)
         {
-            this.keys_rotated_pos_dict['%'][k] = this.center + (this.keys_rotated_pos_dict['%'][k] - this.center) * this.scale_finger;
+            //this.keys_rotated_pos_dict['%'][k] = this.center + (this.keys_rotated_pos_dict['%'][k] - this.center) * this.scale_finger;
             Vector3 sp = this.cam.WorldToScreenPoint(this.keys_rotated_pos_dict['%'][k]);
             screenCorners_space[k] = new Vector2(sp.x, sp.y);
         }
