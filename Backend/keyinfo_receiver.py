@@ -96,13 +96,14 @@ class KeyInfoReceiver(Thread):
 
         while not self.stop_flg:
             frame_id, keysize, angles, keys = self.read_one_frame()
-            print(f"frame_id_receiver: {frame_id}")
+            """print(f"frame_id_receiver: {frame_id}")
             print(f"keysize_receiver: {keysize}")
             for i in range(2):
                 print(f"{i}angles: {angles[i]}")
             for i in range(29):
-                print(f"{i}key: {keys[i]}")
-            #self.sh_keys_pos_from_unity.set((frame_id, keys))
+                print(f"{i}key: {keys[i]}")"""
+
+            self.sh_keys_pos_from_unity.set((frame_id, keysize, angles, keys))
             
 
         print("KeyInfo Receiver STOP")

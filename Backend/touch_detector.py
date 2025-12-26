@@ -61,19 +61,22 @@ class TouchDetector(Thread):
         while not self.stop_flg:
             logging('TouchDetectorLoopLog', None)
             image_and_landmarks = self.sh_image_and_landmarks.try_get()
+            if image_and_landmarks is None:
+                continue
+            fid_landmark, image_land, land_marks = image_and_landmarks
             count_keys = self.sh_keys_pos_from_unity.try_get()
             key_images = []
             if count_keys is None:
                 time.sleep(0.02)
             else:
-                count, keys_pos = count_keys
+                count, keysize, angles, keys_pos = count_keys
                 id_image = self.sh_framebuffer.get_by_frame_id(count)
                 if id_image is not None:
                     fid, img = id_image
-                    """if (fid % 10 == 0):
-                        cv2.imwrite(f"./image_test/frame_{fid}.png", img)"""
-                    for i, key_corner_pos in enumerate(keys_pos):
-                        cropped_image = preprocessing.crop_key_with_padding(img, key_corner_pos)
+                    if (fid % 10 == 0):
+                        cv2.imwrite(f"./image_test/frame_{fid}.png", img)
+                    for i, key_pos in enumerate(keys_pos):
+                        cropped_image = preprocessing.crop_key_image(img, land_marks, keysize, angles, key_pos)
                         if cropped_image is None:
                             print("cropped_image is None")
                             #logging('TouchDetectLog', None)

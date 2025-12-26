@@ -102,3 +102,54 @@ def crop_key_with_padding(
 
     return warped
 
+
+def crop_key_image(base_img, landmarks, keysize, angles, key_pos):
+    
+    height, width, _ = base_img.shape
+    finger_length = 0
+    for fingertip_id in [POS.INDEX_FINGER_TIP, POS.MIDDLE_FINGER_TIP, POS.RING_FINGER_TIP, POS.PINKY_TIP]:
+        finger_length += calc_bone_length(landmarks, width, height, fingertip_id)
+    key_w = key_h = finger_length / 4.0 * 0.1777 * 2.0
+
+    ux, uy = angles[0]
+    vx, vy = angles[1]
+    key_x, key_y = key_pos
+    hw, hh = key_w / 2, key_h / 2
+
+    dst_pts = np.array([
+        [0, 0],
+        [key_w, 0],
+        [key_w, key_h],
+        [0, key_h]
+    ], dtype=np.float32)
+
+    local = np.array([
+        [-hw, -hh],
+        [ hw, -hh],
+        [ hw,  hh],
+        [-hw,  hh]
+    ])
+
+    R = np.array([
+        [ux, vx],
+        [uy,  vy]
+    ])
+
+    pts = (local @ R.T) + np.array([key_x, key_y])
+    src_pts = pts.astype(np.float32)
+
+    H, _ = cv2.findHomography(src_pts, dst_pts)
+
+    # 画像切り出し
+    cropped = cv2.warpPerspective(
+        base_img,
+        H,
+        (OUT_SIZE, OUT_SIZE),
+        flags=cv2.INTER_LINEAR,
+        borderMode=cv2.BORDER_CONSTANT,
+        borderValue=(0, 0, 0)
+    )
+
+    return cropped
+
+

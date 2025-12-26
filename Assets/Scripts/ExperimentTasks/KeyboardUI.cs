@@ -198,7 +198,16 @@ public class KeyboardUI : MonoBehaviour, IExperimentUI
 
                 //Vector3 screen_keycenter_Pos = this.cam.WorldToScreenPoint(this.keys[target_char].rectTransform.position); // Screen座標（左下原点）
                 //Vector2 keycenter_Pos = new Vector2(screen_keycenter_Pos.x * (this.imgW / Screen.width), (Screen.height - screen_keycenter_Pos.y) * (this.imgH / Screen.height));
-                Vector2 keycenter_Pos = new Vector2(pos.x + this.imgW * 0.5f, this.imgH * 0.5f - pos.y);
+
+                //Vector2 keycenter_Pos = new Vector2(pos.x + this.imgW * 0.5f, this.imgH * 0.5f - pos.y);
+
+                Vector3[] corners = new Vector3[4];
+                this.keys[target_char].rectTransform.GetWorldCorners(corners);
+
+                Vector2 center = (corners[0] + corners[1] + corners[2] + corners[3]) / 4f;
+
+                Vector2 screenPos = RectTransformUtility.WorldToScreenPoint(this.cam, center);
+                Vector2 keycenter_Pos = new Vector2(screenPos.x * this.imgW / Screen.width, (Screen.height - screenPos.y) * this.imgH / Screen.height);
                 this.keys_center_pos[this.key_count] = keycenter_Pos;
                 this.key_count += 1;
                 /*for (int k = 0; k < 4; k++)
@@ -267,7 +276,7 @@ public class KeyboardUI : MonoBehaviour, IExperimentUI
 
         this.keySizePx = this.Space_key.rectTransform.sizeDelta.x * this.Space_key.rectTransform.localScale.x;
         this.keySizePx = this.keySizePx * (this.imgW / Screen.width);
-        this.keySizePx = this.keySizePx * scale_finger * 2.0f;
+        //this.keySizePx = this.keySizePx * scale_finger * 2.0f;
         this.keysize_Px.Set(this.keySizePx);
         this.keys_total_pos.Set(this.keys_center_pos);
 
