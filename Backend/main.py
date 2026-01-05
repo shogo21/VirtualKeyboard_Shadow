@@ -40,11 +40,10 @@ touches_sender.start()
 keyinfo_receiver.start()
 
 tracker = HandTracker(sh_image2, sh_landmarks1, sh_landmarks2, sh_image_and_landmarks)
-detector = TouchDetector(sh_image_and_landmarks, sh_touches, sh_framebuffer, sh_keys_pos_from_unity)
+detector = TouchDetector(sh_touches, sh_framebuffer, sh_keys_pos_from_unity)
 tracker.start()
 detector.start()
 
-#viewer = TouchViewer()
 frame_id = 0
 
 try:
@@ -60,8 +59,6 @@ try:
         sh_image2.set((frame_id, frame))
         sh_framebuffer.set(frame_id, frame)
         frame_id += 1
-
-        #viewer.replot()
 
         time.sleep(0.02)
 

@@ -276,7 +276,6 @@ public class KeyboardUI : MonoBehaviour, IExperimentUI
     private void UpdateKeyTextures()
     {
         Texture2D applying_texture;
-        // char[] touching_chars = this.hovered_chars.Where((c, i) => this.is_touching[i]).ToArray();
 
         foreach (KeyValuePair<char, KeyState> target in this.keys)
         {
@@ -287,10 +286,6 @@ public class KeyboardUI : MonoBehaviour, IExperimentUI
             target.Value.rectTransform.GetComponent<RawImage>().texture = applying_texture;
         }
 
-        /*if (clicked_char.Contains('#')) applying_texture = this.clicked_key_texture;
-        // else if (touching_chars.Contains('#')) applying_texture = this.touching_key_texture;
-        else applying_texture = this.normal_key_texture;
-        this.SD_key.rectTransform.GetComponent<RawImage>().texture = applying_texture;*/
 
         if (clicked_char == '#') applying_texture = this.clicked_key_texture;
         // else if (touching_chars.Contains('#')) applying_texture = this.touching_key_texture;
