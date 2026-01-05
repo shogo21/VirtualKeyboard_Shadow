@@ -22,7 +22,7 @@ public class TouchReceiver : ThreadRunner
                     if (this.token.IsCancellationRequested) break;
                     if (pipe.status == NamedPipeServer.Status.Connected)
                     {
-                        byte[] bytes = pipe.Read(1 * 4);
+                        byte[] bytes = pipe.Read(1 * 29);
                         if (bytes == null) break;
                         this.sh_touches.Set(BytesToBooleans(bytes));
                     }

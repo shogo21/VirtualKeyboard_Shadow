@@ -103,47 +103,29 @@ def crop_key_with_padding(
     return warped
 
 
-def crop_key_image(base_img, landmarks, keysize, angles, key_pos):
-    
-    height, width, _ = base_img.shape
-    finger_length = 0
-    for fingertip_id in [POS.INDEX_FINGER_TIP, POS.MIDDLE_FINGER_TIP, POS.RING_FINGER_TIP, POS.PINKY_TIP]:
-        finger_length += calc_bone_length(landmarks, width, height, fingertip_id)
-    key_w = key_h = finger_length / 4.0 * 0.1777 * 2.0
 
-    ux, uy = angles[0]
-    vx, vy = angles[1]
-    key_x, key_y = key_pos
-    hw, hh = key_w / 2, key_h / 2
+def crop_by_key(base_image, corners):
+    src = np.array([
+        corners[1],
+        corners[0],
+        corners[3],
+        corners[2]
+        ], dtype=np.float32)
 
-    dst_pts = np.array([
+    dst = np.array([
         [0, 0],
-        [key_w, 0],
-        [key_w, key_h],
-        [0, key_h]
+        [OUT_SIZE-1, 0],
+        [OUT_SIZE-1, OUT_SIZE-1],
+        [0, OUT_SIZE-1]
     ], dtype=np.float32)
 
-    local = np.array([
-        [-hw, -hh],
-        [ hw, -hh],
-        [ hw,  hh],
-        [-hw,  hh]
-    ])
+    # 射影変換行列
+    M = cv2.getPerspectiveTransform(src, dst)
 
-    R = np.array([
-        [ux, vx],
-        [uy,  vy]
-    ])
-
-    pts = (local @ R.T) + np.array([key_x, key_y])
-    src_pts = pts.astype(np.float32)
-
-    H, _ = cv2.findHomography(src_pts, dst_pts)
-
-    # 画像切り出し
+    # Warp（画像外は黒で埋める）
     cropped = cv2.warpPerspective(
-        base_img,
-        H,
+        base_image,
+        M,
         (OUT_SIZE, OUT_SIZE),
         flags=cv2.INTER_LINEAR,
         borderMode=cv2.BORDER_CONSTANT,
@@ -152,4 +134,15 @@ def crop_key_image(base_img, landmarks, keysize, angles, key_pos):
 
     return cropped
 
+def order_points(pts):
+    pts = np.array(pts, dtype=np.float32)
 
+    s = pts.sum(axis=1)
+    diff = np.diff(pts, axis=1)
+
+    tl = pts[np.argmin(s)]
+    br = pts[np.argmax(s)]
+    tr = pts[np.argmin(diff)]
+    bl = pts[np.argmax(diff)]
+
+    return [tl, tr, br, bl]

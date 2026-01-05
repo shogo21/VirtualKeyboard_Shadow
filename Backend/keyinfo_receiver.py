@@ -53,31 +53,24 @@ class KeyInfoReceiver(Thread):
             return None, None, None, None
         keysize = struct.unpack("<f", raw_keysize)[0]
 
-        angles = []
-        for _ in range(2):
-            angle_x = self.read_exact(4)
-            if not angle_x:
-                return None, None, None, None
-            anglex = struct.unpack("<f", angle_x)[0]
-            angle_y = self.read_exact(4)
-            if not angle_y:
-                return None, None, None, None
-            angley = struct.unpack("<f", angle_y)[0]
-            angles.append((anglex, angley))
+        raw_angle = self.read_exact(4)
+        if not raw_angle:
+            return None, None, None, None
+        angle = struct.unpack("<f", raw_angle)[0]
             
-        keys = []
+        keys_pos = []
         for _ in range(29):
-            x = self.read_exact(4)
-            if not x:
+            raw_pos_x = self.read_exact(4)
+            if not raw_pos_x:
                 return None, None, None, None
-            pos_x = struct.unpack("<f", x)[0]
-            y = self.read_exact(4)
-            if not y:
+            pos_x = struct.unpack("<f", raw_pos_x)[0]
+            raw_pos_y = self.read_exact(4)
+            if not raw_pos_y:
                 return None, None, None, None
-            pos_y = struct.unpack("<f", y)[0]
-            keys.append((pos_x, pos_y))
+            pos_y = struct.unpack("<f", raw_pos_y)[0]
+            keys_pos.append((pos_x, pos_y))
 
-        return frame_id, keysize, angles, keys
+        return frame_id, keysize, angle, keys_pos
 
     def run(self):
         connected = False
@@ -95,7 +88,7 @@ class KeyInfoReceiver(Thread):
         print("KeyInfo Receiver START.")
 
         while not self.stop_flg:
-            frame_id, keysize, angles, keys = self.read_one_frame()
+            frame_id, keysize, angle, keys_pos = self.read_one_frame()
             """print(f"frame_id_receiver: {frame_id}")
             print(f"keysize_receiver: {keysize}")
             for i in range(2):
@@ -103,7 +96,7 @@ class KeyInfoReceiver(Thread):
             for i in range(29):
                 print(f"{i}key: {keys[i]}")"""
 
-            self.sh_keys_pos_from_unity.set((frame_id, keysize, angles, keys))
+            self.sh_keys_pos_from_unity.set((frame_id, keysize, angle, keys_pos))
             
 
         print("KeyInfo Receiver STOP")

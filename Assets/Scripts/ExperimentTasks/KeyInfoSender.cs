@@ -11,21 +11,20 @@ public class KeyInfoSender : ThreadRunner
 {
     private NamedPipeServer pipe;
     private SharedData<uint> frame_id;
-    private SharedData<float> keysize_Px;
-    private SharedData<Vector2[]> keys_angle;
-    private SharedData<Vector2[]> keys_pos;
+    private SharedData<float> keys_size;
+    private SharedData<float> keys_angle;
+    private SharedData<Vector2[]> keys_centerpos;
     private string pipeName = "KeyInfoPipe";
     private readonly object sendLock = new object();
     static readonly byte[] MAGIC = Encoding.ASCII.GetBytes("KSF1PIPE");
-    private uint payloadSize = 4 + 29 * 4 * 2 * 4;
 
 
-    public KeyInfoSender(SharedData<uint> frame_id, SharedData<float> keysize_Px, SharedData<Vector2[]> keys_angle, SharedData<Vector2[]> keys_pos)
+    public KeyInfoSender(SharedData<uint> frame_id, SharedData<float> keys_size, SharedData<float> keys_angle, SharedData<Vector2[]> keys_centerpos)
     {
         this.frame_id = frame_id;
-        this.keysize_Px = keysize_Px;
+        this.keys_size = keys_size;
         this.keys_angle = keys_angle;
-        this.keys_pos = keys_pos;
+        this.keys_centerpos = keys_centerpos;
         this.pipe = new NamedPipeServer(this.pipeName);
     }
 
@@ -45,15 +44,15 @@ public class KeyInfoSender : ThreadRunner
             if (token.IsCancellationRequested) break;
             if (this.pipe.status == NamedPipeServer.Status.Connected)
             {
-                if (this.frame_id.TryGet(out uint fid) && this.keysize_Px.TryGet(out float keysize) && this.keys_angle.TryGet(out Vector2[] angle) && this.keys_pos.TryGet(out Vector2[] keys_center_pos))
+                if (this.frame_id.TryGet(out uint frameId) && this.keys_size.TryGet(out float keysSize) && this.keys_angle.TryGet(out float keysAngle) && this.keys_centerpos.TryGet(out Vector2[] keysCenterpos))
                 {
-                    TrySendKeyPos(fid, keysize, angle, keys_center_pos);
+                    TrySendKeyPos(frameId, keysSize, keysAngle, keysCenterpos);
                 }
             }
         }
     }
 
-    public void TrySendKeyPos(uint fId, float sizeKey, Vector2[] angle_key, Vector2[] keys_total_pos)
+    public void TrySendKeyPos(uint frame_Id, float keys_Size, float keys_Angle, Vector2[] keys_Cenerpos)
     {
         // ---- 二重送信・割り込み防止 ----
         lock (sendLock)
@@ -63,27 +62,23 @@ public class KeyInfoSender : ThreadRunner
                 using (MemoryStream ms = new MemoryStream())
                 {
                     ms.Write(MAGIC, 0, MAGIC.Length);
-                    ms.Write(BitConverter.GetBytes(fId), 0, 4); // uint32
-                    ms.Write(BitConverter.GetBytes(sizeKey), 0, 4);
+                    ms.Write(BitConverter.GetBytes(frame_Id), 0, 4); // uint32
+                    ms.Write(BitConverter.GetBytes(keys_Size), 0, 4);
 
-                    for (int i = 0; i < angle_key.Length; i++)
-                    {
-                        ms.Write(BitConverter.GetBytes(angle_key[i].x), 0, 4);
-                        ms.Write(BitConverter.GetBytes(angle_key[i].y), 0, 4);
-                    }
+                    ms.Write(BitConverter.GetBytes(keys_Angle), 0, 4);
 
                     // ---- 座標データ ----
-                    for (int i = 0; i < keys_total_pos.Length; i++)
+                    for (int i = 0; i < keys_Cenerpos.Length; i++)
                     {
-                        if (keys_total_pos[i] == null)
+                        if (keys_Cenerpos[i] == null)
                         {
                             ms.Write(BitConverter.GetBytes(0f), 0, 4);
                             ms.Write(BitConverter.GetBytes(0f), 0, 4);
                         }
                         else
                         {
-                            ms.Write(BitConverter.GetBytes(keys_total_pos[i].x), 0, 4);
-                            ms.Write(BitConverter.GetBytes(keys_total_pos[i].y), 0, 4);
+                            ms.Write(BitConverter.GetBytes(keys_Cenerpos[i].x), 0, 4);
+                            ms.Write(BitConverter.GetBytes(keys_Cenerpos[i].y), 0, 4);
                         }
                     }
 

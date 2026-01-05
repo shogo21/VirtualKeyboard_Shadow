@@ -39,8 +39,9 @@ public class KeyboardUI : MonoBehaviour, IExperimentUI
     private Dictionary<char, KeyState> keys = new Dictionary<char, KeyState>();
     private KeyState SD_key, up_SD_key, Enter_key, Space_key;
 
-    private char[] hovered_chars = { ' ', ' ', ' ', ' ' };
-    private char[] clicked_chars = { ' ', ' ', ' ', ' ' };
+    //private char[] hovered_chars = { ' ', ' ', ' ', ' ' };
+    //private char[] clicked_chars = { ' ', ' ', ' ', ' ' };
+    private char clicked_char//
 
     private RectTransform phrase, inputted_phrase, warning, warning2;
 
@@ -62,14 +63,15 @@ public class KeyboardUI : MonoBehaviour, IExperimentUI
     private float inputted_phrase_timer = 0;
     private uint current_frame, last_frame_id = 100;
     private SharedData<uint> frame_id = new SharedData<uint>();
-    private float scale, keySizePx;
+    private float scale;
+    //private float keySizePx;
     private int key_count;
-    private SharedData<float> keysize_Px = new SharedData<float>();
 
     private Vector2[] keys_center_pos = new Vector2[29];
-    private Vector2[] keys_angle = new Vector2[2];
+    //private Vector2 keys_angle = new Vector2;
     private SharedData<Vector2[]> keys_total_pos = new SharedData<Vector2[]>();
-    private SharedData<Vector2[]> keys_angle_total = new SharedData<Vector2[]>();
+    private SharedData<float> keys_angle = new SharedData<float>();
+    private SharedData<float> keysize = new SharedData<float>();
     private float imgH = 480;
     private float imgW = 640;
     private float scale_finger = 1.323f;
@@ -98,7 +100,6 @@ public class KeyboardUI : MonoBehaviour, IExperimentUI
         this.warning2 = GameObject.Find("Canvas/Warning2").GetComponent<RectTransform>();
         this.canvascontroller = GameObject.Find("Canvas/Background").GetComponent<CanvasController>();
         this.canvas = GameObject.Find("Canvas").GetComponent<Canvas>();
-        this.cam = canvas.worldCamera;
 
         for (int i = 0; i < 26; i++)
         {
@@ -135,7 +136,7 @@ public class KeyboardUI : MonoBehaviour, IExperimentUI
         this.touching_key_texture = Resources.Load<Texture2D>("Images/green_box");
         this.disabled_key_texture = Resources.Load<Texture2D>("Images/gray_out_box");
 
-        this.keyinfosender = new KeyInfoSender(this.frame_id, this.keysize_Px, this.keys_angle_total, this.keys_total_pos);
+        this.keyinfosender = new KeyInfoSender(this.frame_id, this.keysize, this.keys_angle, this.keys_total_pos);
         this.keyinfosender.Start();
 
         this.StopTyping();
@@ -171,13 +172,12 @@ public class KeyboardUI : MonoBehaviour, IExperimentUI
         float angle = Mathf.Atan2(-scaled_axis.y, -scaled_axis.x);
         this.key_count = 0;
 
-        Vector2 uxuy = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle));  // 右方向ベクトル
+        /*Vector2 uxuy = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle));  // 右方向ベクトル
         Vector2 vxvy = new Vector2(-Mathf.Sin(angle), Mathf.Cos(angle)); // 下方向ベクトル（右方向に垂直）
         uxuy.Normalize();
         vxvy.Normalize();
         this.keys_angle[0] = uxuy;
-        this.keys_angle[1] = vxvy;
-        this.keys_angle_total.Set(this.keys_angle);
+        this.keys_angle[1] = vxvy;*/
 
         for (int i = 0; i < keys_array.Length; i++)
         {
@@ -201,14 +201,14 @@ public class KeyboardUI : MonoBehaviour, IExperimentUI
 
                 //Vector2 keycenter_Pos = new Vector2(pos.x + this.imgW * 0.5f, this.imgH * 0.5f - pos.y);
 
-                Vector3[] corners = new Vector3[4];
+                /*Vector3[] corners = new Vector3[4];
                 this.keys[target_char].rectTransform.GetWorldCorners(corners);
 
                 Vector2 center = (corners[0] + corners[1] + corners[2] + corners[3]) / 4f;
 
                 Vector2 screenPos = RectTransformUtility.WorldToScreenPoint(this.cam, center);
-                Vector2 keycenter_Pos = new Vector2(screenPos.x * this.imgW / Screen.width, (Screen.height - screenPos.y) * this.imgH / Screen.height);
-                this.keys_center_pos[this.key_count] = keycenter_Pos;
+                Vector2 keycenter_Pos = new Vector2(screenPos.x * this.imgW / Screen.width, (Screen.height - screenPos.y) * this.imgH / Screen.height);*/
+                this.keys_center_pos[this.key_count] = this.keys[target_char].rectTransform.anchoredPosition;
                 this.key_count += 1;
                 /*for (int k = 0; k < 4; k++)
                 {
@@ -230,8 +230,8 @@ public class KeyboardUI : MonoBehaviour, IExperimentUI
         this.up_SD_key.rectTransform.localScale = new Vector3(scale, scale, 1);
         //Vector3 screen_upsd_center_Pos = this.cam.WorldToScreenPoint(this.up_SD_key.rectTransform.position); // Screen座標（左下原点）
         //Vector2 upsd_center_Pos = new Vector2(screen_upsd_center_Pos.x * (this.imgW / Screen.width), (Screen.height - screen_upsd_center_Pos.y) * (this.imgH / Screen.height));
-        Vector2 upsd_center_Pos = new Vector2(up_sd_pos.x + this.imgW * 0.5f, this.imgH * 0.5f - up_sd_pos.y);
-        this.keys_center_pos[26] = upsd_center_Pos;
+        //Vector2 upsd_center_Pos = new Vector2(up_sd_pos.x + this.imgW * 0.5f, this.imgH * 0.5f - up_sd_pos.y);
+        this.keys_center_pos[26] = this.up_SD_key.rectTransform.anchoredPosition;
         /*for (int k = 0; k < 4; k++)
         {
             UnityLogger.Log($"# corner {k}: {this.keys_rotated_pos[26][k]}");
@@ -249,8 +249,8 @@ public class KeyboardUI : MonoBehaviour, IExperimentUI
         this.Enter_key.rectTransform.localScale = new Vector3(scale, scale, 1);
         //Vector3 screen_enter_center_Pos = this.cam.WorldToScreenPoint(this.Enter_key.rectTransform.position); // Screen座標（左下原点）
         //Vector2 enter_center_Pos = new Vector2(screen_enter_center_Pos.x * (this.imgW / Screen.width), (Screen.height - screen_enter_center_Pos.y) * (this.imgH / Screen.height));
-        Vector2 enter_center_Pos = new Vector2(enter_pos.x + this.imgW * 0.5f, this.imgH * 0.5f - enter_pos.y);
-        this.keys_center_pos[27] = enter_center_Pos;
+        //Vector2 enter_center_Pos = new Vector2(enter_pos.x + this.imgW * 0.5f, this.imgH * 0.5f - enter_pos.y);
+        this.keys_center_pos[27] = this.Enter_key.rectTransform.anchoredPosition;
         if (this.Enter_key.timer > 0f)
         {
             this.Enter_key.timer -= Time.deltaTime;
@@ -266,18 +266,20 @@ public class KeyboardUI : MonoBehaviour, IExperimentUI
         this.Space_key.rectTransform.localScale = new Vector3(scale, scale, 1);
         //Vector3 screen_space_center_Pos = this.cam.WorldToScreenPoint(this.Space_key.rectTransform.position); // Screen座標（左下原点）
         //Vector2 space_center_Pos = new Vector2(screen_space_center_Pos.x * (this.imgW / Screen.width), (Screen.height - screen_space_center_Pos.y) * (this.imgH / Screen.height));
-        Vector2 space_center_Pos = new Vector2(space_pos.x + this.imgW * 0.5f, this.imgH * 0.5f - space_pos.y);
-        this.keys_center_pos[28] = space_center_Pos;
+        //Vector2 space_center_Pos = new Vector2(space_pos.x + this.imgW * 0.5f, this.imgH * 0.5f - space_pos.y);
+        this.keys_center_pos[28] = this.Space_key.rectTransform.anchoredPosition;
         if (this.Space_key.timer > 0f)
         {
             this.Space_key.timer -= Time.deltaTime;
         }
         Logger.Logging(new KeyLog('%', this.Space_key.rectTransform, KEY_DISTANCE));
 
-        this.keySizePx = this.Space_key.rectTransform.sizeDelta.x * this.Space_key.rectTransform.localScale.x;
-        this.keySizePx = this.keySizePx * (this.imgW / Screen.width);
+        this.keys_angle.Set(this.Space_key.rectTransform.localRotation.eulerAngles.z * Mathf.Deg2Rad);
+
+        /*this.keySizePx = this.Space_key.rectTransform.sizeDelta.x * this.Space_key.rectTransform.localScale.x;
+        this.keySizePx = this.keySizePx * (this.imgW / Screen.width);*/
         //this.keySizePx = this.keySizePx * scale_finger * 2.0f;
-        this.keysize_Px.Set(this.keySizePx);
+        this.keysize.Set(this.Space_key.rectTransform.sizeDelta.x * this.Space_key.rectTransform.localScale.x);
         this.keys_total_pos.Set(this.keys_center_pos);
 
         this.phrase.anchoredPosition = scaled_marker_position + scaled_axis * (-10.5f * KEY_DISTANCE / MARKER_SIZE + DISTANCE_FROM_MARKER / MARKER_SIZE) + downward * -4.5f * KEY_DISTANCE / MARKER_SIZE;
