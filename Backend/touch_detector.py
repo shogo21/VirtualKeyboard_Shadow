@@ -53,8 +53,8 @@ class TouchDetector(Thread):
         # self.model.compile()
 
         #mycode
-        self.output = [[0]*WINDOW_SIZE for _ in range(4)]
-        self.output_float = [np.array([0.0]*WINDOW_SIZE) for _ in range(4)]
+        self.output = [[0]*WINDOW_SIZE for _ in range(NUM_ROWS)]
+        self.output_float = [np.array([0.0]*WINDOW_SIZE) for _ in range(NUM_ROWS)]
     
     def run(self):
         # In thread
@@ -71,7 +71,7 @@ class TouchDetector(Thread):
                 time.sleep(0.02)
             else:
                 count, keysize, angle, keys_pos = count_keys
-                keysize = keysize * 1.5
+                keysize = keysize * 1.29
                 id_image = self.sh_framebuffer.get_by_frame_id(count)
                 if id_image is not None:
                     fid, img = id_image
@@ -85,11 +85,11 @@ class TouchDetector(Thread):
                             corners_angle = -angle + math.pi/2*j + math.pi/4
                             pt = [dist * math.cos(corners_angle)+pos[0], dist * math.sin(corners_angle)+pos[1]]
                             corners_pos.append(pt)
-                        #corners_pos = preprocessing.order_points(corners_pos)
                         cropped_image = preprocessing.crop_by_key(img, corners_pos)
                         if cropped_image is None:
-                            print("cropped_image is None")
+                            #print("cropped_image is None")
                             #logging('TouchDetectLog', None)
+                            #key_images.append(np.zeros((64, 64, 3), dtype=np.float32))
                             continue
                         else:
                             cropped_image = cv2.rotate(cropped_image, cv2.ROTATE_180)
@@ -98,15 +98,19 @@ class TouchDetector(Thread):
                                 cv2.imwrite(f"./image_test/cropped_image_{fid}frame_{i}key.png", cropped_image)
                                 #print(key_corner_pos)
                                 print(f"Saved cropped_image_{fid}frame_{i}key")
+            
 
-            touches = self.model([image.reshape((1,1,64,64,3)) for image in key_images])
-            touches = [t.numpy() for t in touches]
+            if not key_images:
+                continue
+            else:
+                touches = self.model([image.reshape((1,1,64,64,3)) for image in key_images])
+                touches = [t.numpy() for t in touches]
 
-            #mycode
-            process_values(touches, self.output, self.output_float)
-            logging('TouchDetectLog', [t[int((WINDOW_SIZE-1)/2)].item() for t in self.output_float])
-            #print(t[int((WINDOW_SIZE-1)/2)].item() for t in self.output_float])
-            self.sh_touches.set([t[int((WINDOW_SIZE-1)/2)] > 0.5 for t in self.output])
+                #mycode
+                process_values(touches, self.output, self.output_float)
+                logging('TouchDetectLog', [t[int((WINDOW_SIZE-1)/2)].item() for t in self.output_float])
+                #print([t[int((WINDOW_SIZE-1)/2)].item() for t in self.output_float])
+                self.sh_touches.set([t[int((WINDOW_SIZE-1)/2)] > 0.5 for t in self.output])
 
             """if image_and_landmarks is None:
                 time.sleep(0.02)

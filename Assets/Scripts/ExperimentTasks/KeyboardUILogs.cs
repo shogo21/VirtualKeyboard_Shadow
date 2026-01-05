@@ -32,20 +32,18 @@ public class FingerHoverLog
 public class PressedKeyLog
 {
     [SerializeField] private string key;
-    [SerializeField] private int index;
-    public PressedKeyLog(char _key, int _index)
+    public PressedKeyLog(char _key)
     {
         this.key = "" + _key;
-        this.index = _index;
     }
 }
 
 public class ReleasedKeyLog
 {
-    [SerializeField] private int index;
-    public ReleasedKeyLog(int _index)
+    [SerializeField] private char key;
+    public ReleasedKeyLog(char _key)
     {
-        this.index = _index;
+        this.key = _key;
     }
 }
 

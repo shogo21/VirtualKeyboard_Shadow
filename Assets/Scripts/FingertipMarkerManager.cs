@@ -67,9 +67,9 @@ public class FingertipMarkerManager : MonoBehaviour
             }
         }
 
-        this.UI.CalcHoverKey(
+        /*this.UI.CalcHoverKey(
             this.markerRectTransforms.Select(rt => rt.anchoredPosition).ToArray()
-            );
+            );*/
         
         this.UI.NotifyWristPosition(this.wrist_position);
 

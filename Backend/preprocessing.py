@@ -132,17 +132,9 @@ def crop_by_key(base_image, corners):
         borderValue=(0, 0, 0)
     )
 
+    cropped = Image.fromarray(cropped)
+    cropped = cropped.resize((64, 64))
+    cropped = np.asarray(cropped).astype('float32')
+    cropped = converter.normal(cropped)
+
     return cropped
-
-def order_points(pts):
-    pts = np.array(pts, dtype=np.float32)
-
-    s = pts.sum(axis=1)
-    diff = np.diff(pts, axis=1)
-
-    tl = pts[np.argmin(s)]
-    br = pts[np.argmax(s)]
-    tr = pts[np.argmin(diff)]
-    bl = pts[np.argmax(diff)]
-
-    return [tl, tr, br, bl]

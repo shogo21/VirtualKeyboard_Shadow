@@ -33,15 +33,15 @@ public class KeyboardUI : MonoBehaviour, IExperimentUI
     private ARMarkerDetector detector;
     private RectTransform background_transform;
     private CanvasController canvascontroller;
-    private Canvas canvas;
-    private Camera cam;
 
     private Dictionary<char, KeyState> keys = new Dictionary<char, KeyState>();
     private KeyState SD_key, up_SD_key, Enter_key, Space_key;
 
     //private char[] hovered_chars = { ' ', ' ', ' ', ' ' };
     //private char[] clicked_chars = { ' ', ' ', ' ', ' ' };
-    private char clicked_char//
+    private char clicked_char;
+
+
 
     private RectTransform phrase, inputted_phrase, warning, warning2;
 
@@ -62,24 +62,19 @@ public class KeyboardUI : MonoBehaviour, IExperimentUI
     private float phrase_timer = 0;
     private float inputted_phrase_timer = 0;
     private uint current_frame, last_frame_id = 100;
-    private SharedData<uint> frame_id = new SharedData<uint>();
     private float scale;
-    //private float keySizePx;
     private int key_count;
 
     private Vector2[] keys_center_pos = new Vector2[29];
-    //private Vector2 keys_angle = new Vector2;
     private SharedData<Vector2[]> keys_total_pos = new SharedData<Vector2[]>();
+    private SharedData<uint> frame_id = new SharedData<uint>();
     private SharedData<float> keys_angle = new SharedData<float>();
     private SharedData<float> keysize = new SharedData<float>();
-    private float imgH = 480;
-    private float imgW = 640;
-    private float scale_finger = 1.323f;
 
     bool input_accepting = false;
 
     private static readonly string[] keys_array = { "QWERTYUIOP", "ASDFGHJKL", "ZXCVBNM" };
-
+    private static readonly char[] keys_array_direct = { 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '#', '&', '%'};
     private Texture2D normal_key_texture, clicked_key_texture, touching_key_texture, disabled_key_texture;
 
     public bool forceStop = false;
@@ -99,7 +94,6 @@ public class KeyboardUI : MonoBehaviour, IExperimentUI
         this.warning = this.rect_transform.Find("Warning").GetComponent<RectTransform>();
         this.warning2 = GameObject.Find("Canvas/Warning2").GetComponent<RectTransform>();
         this.canvascontroller = GameObject.Find("Canvas/Background").GetComponent<CanvasController>();
-        this.canvas = GameObject.Find("Canvas").GetComponent<Canvas>();
 
         for (int i = 0; i < 26; i++)
         {
@@ -172,13 +166,6 @@ public class KeyboardUI : MonoBehaviour, IExperimentUI
         float angle = Mathf.Atan2(-scaled_axis.y, -scaled_axis.x);
         this.key_count = 0;
 
-        /*Vector2 uxuy = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle));  // 右方向ベクトル
-        Vector2 vxvy = new Vector2(-Mathf.Sin(angle), Mathf.Cos(angle)); // 下方向ベクトル（右方向に垂直）
-        uxuy.Normalize();
-        vxvy.Normalize();
-        this.keys_angle[0] = uxuy;
-        this.keys_angle[1] = vxvy;*/
-
         for (int i = 0; i < keys_array.Length; i++)
         {
             string keys_row = keys_array[i];
@@ -196,18 +183,6 @@ public class KeyboardUI : MonoBehaviour, IExperimentUI
                 scale = KEY_SIZE / MARKER_SIZE * scaled_axis.magnitude / this.keys[target_char].rectTransform.sizeDelta.x;
                 this.keys[target_char].rectTransform.localScale = new Vector3(scale, scale, 1);
 
-                //Vector3 screen_keycenter_Pos = this.cam.WorldToScreenPoint(this.keys[target_char].rectTransform.position); // Screen座標（左下原点）
-                //Vector2 keycenter_Pos = new Vector2(screen_keycenter_Pos.x * (this.imgW / Screen.width), (Screen.height - screen_keycenter_Pos.y) * (this.imgH / Screen.height));
-
-                //Vector2 keycenter_Pos = new Vector2(pos.x + this.imgW * 0.5f, this.imgH * 0.5f - pos.y);
-
-                /*Vector3[] corners = new Vector3[4];
-                this.keys[target_char].rectTransform.GetWorldCorners(corners);
-
-                Vector2 center = (corners[0] + corners[1] + corners[2] + corners[3]) / 4f;
-
-                Vector2 screenPos = RectTransformUtility.WorldToScreenPoint(this.cam, center);
-                Vector2 keycenter_Pos = new Vector2(screenPos.x * this.imgW / Screen.width, (Screen.height - screenPos.y) * this.imgH / Screen.height);*/
                 this.keys_center_pos[this.key_count] = this.keys[target_char].rectTransform.anchoredPosition;
                 this.key_count += 1;
                 /*for (int k = 0; k < 4; k++)
@@ -226,11 +201,7 @@ public class KeyboardUI : MonoBehaviour, IExperimentUI
         Vector2 up_sd_pos = scaled_marker_position + scaled_axis * 4.5f * (DISTANCE_FROM_MARKER / MARKER_SIZE) + downward * -0.3f;
         this.up_SD_key.rectTransform.anchoredPosition = up_sd_pos;
         this.up_SD_key.rectTransform.localRotation = Quaternion.Euler(0, 0, angle * Mathf.Rad2Deg);
-        //float up_sd_scale = KEY_SIZE / MARKER_SIZE * scaled_axis.magnitude / this.up_SD_key.rectTransform.sizeDelta.x;
         this.up_SD_key.rectTransform.localScale = new Vector3(scale, scale, 1);
-        //Vector3 screen_upsd_center_Pos = this.cam.WorldToScreenPoint(this.up_SD_key.rectTransform.position); // Screen座標（左下原点）
-        //Vector2 upsd_center_Pos = new Vector2(screen_upsd_center_Pos.x * (this.imgW / Screen.width), (Screen.height - screen_upsd_center_Pos.y) * (this.imgH / Screen.height));
-        //Vector2 upsd_center_Pos = new Vector2(up_sd_pos.x + this.imgW * 0.5f, this.imgH * 0.5f - up_sd_pos.y);
         this.keys_center_pos[26] = this.up_SD_key.rectTransform.anchoredPosition;
         /*for (int k = 0; k < 4; k++)
         {
@@ -240,45 +211,33 @@ public class KeyboardUI : MonoBehaviour, IExperimentUI
         {
             this.up_SD_key.timer -= Time.deltaTime;
         }
-        Logger.Logging(new KeyLog('#', this.up_SD_key.rectTransform, KEY_DISTANCE));
+        Logger.Logging(new KeyLog('#', this.up_SD_key.rectTransform, KEY_SIZE));
 
         Vector2 enter_pos = scaled_marker_position + scaled_axis * 4.5f * (DISTANCE_FROM_MARKER / MARKER_SIZE) + downward * 0.3f;
         this.Enter_key.rectTransform.anchoredPosition = enter_pos;
         this.Enter_key.rectTransform.localRotation = Quaternion.Euler(0, 0, angle * Mathf.Rad2Deg);
-        //float enter_scale = KEY_SIZE / MARKER_SIZE * scaled_axis.magnitude / this.Enter_key.rectTransform.sizeDelta.x;
         this.Enter_key.rectTransform.localScale = new Vector3(scale, scale, 1);
-        //Vector3 screen_enter_center_Pos = this.cam.WorldToScreenPoint(this.Enter_key.rectTransform.position); // Screen座標（左下原点）
-        //Vector2 enter_center_Pos = new Vector2(screen_enter_center_Pos.x * (this.imgW / Screen.width), (Screen.height - screen_enter_center_Pos.y) * (this.imgH / Screen.height));
-        //Vector2 enter_center_Pos = new Vector2(enter_pos.x + this.imgW * 0.5f, this.imgH * 0.5f - enter_pos.y);
         this.keys_center_pos[27] = this.Enter_key.rectTransform.anchoredPosition;
         if (this.Enter_key.timer > 0f)
         {
             this.Enter_key.timer -= Time.deltaTime;
         }
-        Logger.Logging(new KeyLog('&', this.Enter_key.rectTransform, KEY_DISTANCE));
+        Logger.Logging(new KeyLog('&', this.Enter_key.rectTransform, KEY_SIZE));
 
         float space_offset_y = KEY_DISTANCE / MARKER_SIZE;
         float space_offset_x = -1.0f * KEY_DISTANCE / MARKER_SIZE;
         Vector2 space_pos = scaled_marker_position + scaled_axis * (1.5f * KEY_DISTANCE / MARKER_SIZE + space_offset_x + DISTANCE_FROM_MARKER / MARKER_SIZE) + downward * space_offset_y;
         this.Space_key.rectTransform.anchoredPosition = space_pos;
         this.Space_key.rectTransform.localRotation = Quaternion.Euler(0, 0, angle * Mathf.Rad2Deg);
-        //float space_scale = KEY_SIZE / MARKER_SIZE * scaled_axis.magnitude / this.Space_key.rectTransform.sizeDelta.x;
         this.Space_key.rectTransform.localScale = new Vector3(scale, scale, 1);
-        //Vector3 screen_space_center_Pos = this.cam.WorldToScreenPoint(this.Space_key.rectTransform.position); // Screen座標（左下原点）
-        //Vector2 space_center_Pos = new Vector2(screen_space_center_Pos.x * (this.imgW / Screen.width), (Screen.height - screen_space_center_Pos.y) * (this.imgH / Screen.height));
-        //Vector2 space_center_Pos = new Vector2(space_pos.x + this.imgW * 0.5f, this.imgH * 0.5f - space_pos.y);
         this.keys_center_pos[28] = this.Space_key.rectTransform.anchoredPosition;
         if (this.Space_key.timer > 0f)
         {
             this.Space_key.timer -= Time.deltaTime;
         }
-        Logger.Logging(new KeyLog('%', this.Space_key.rectTransform, KEY_DISTANCE));
+        Logger.Logging(new KeyLog('%', this.Space_key.rectTransform, KEY_SIZE));
 
         this.keys_angle.Set(this.Space_key.rectTransform.localRotation.eulerAngles.z * Mathf.Deg2Rad);
-
-        /*this.keySizePx = this.Space_key.rectTransform.sizeDelta.x * this.Space_key.rectTransform.localScale.x;
-        this.keySizePx = this.keySizePx * (this.imgW / Screen.width);*/
-        //this.keySizePx = this.keySizePx * scale_finger * 2.0f;
         this.keysize.Set(this.Space_key.rectTransform.sizeDelta.x * this.Space_key.rectTransform.localScale.x);
         this.keys_total_pos.Set(this.keys_center_pos);
 
@@ -293,7 +252,6 @@ public class KeyboardUI : MonoBehaviour, IExperimentUI
             this.phrase.GetComponent<UnityEngine.UI.Text>().fontSize = (int)(40f * (1f - this.phrase_timer / 0.5f));
         }
 
-        //this.inputted_phrase.anchoredPosition = scaled_marker_position + scaled_axis * (3.5f * KEY_DISTANCE / MARKER_SIZE + DISTANCE_FROM_MARKER / MARKER_SIZE) + downward * -2f * KEY_DISTANCE / MARKER_SIZE;
         this.inputted_phrase.anchoredPosition = new Vector2(this.phrase.anchoredPosition.x, this.phrase.anchoredPosition.y) + downward * 1.5f * KEY_DISTANCE / MARKER_SIZE;
         this.inputted_phrase.localRotation = Quaternion.Euler(0, 0, angle * Mathf.Rad2Deg);
         this.inputted_phrase.localScale = new Vector3(1, 1, 0) * KEY_SIZE / MARKER_SIZE * scaled_axis.magnitude / 25f;
@@ -322,74 +280,36 @@ public class KeyboardUI : MonoBehaviour, IExperimentUI
 
         foreach (KeyValuePair<char, KeyState> target in this.keys)
         {
-            if (clicked_chars.Contains(target.Key)) applying_texture = this.clicked_key_texture;
+            if (clicked_char == target.Key) applying_texture = this.clicked_key_texture;
             else if (this.input_accepting == false) applying_texture = this.disabled_key_texture;
             // else if (touching_chars.Contains(target.Key)) applying_texture = this.touching_key_texture;
             else applying_texture = this.normal_key_texture;
             target.Value.rectTransform.GetComponent<RawImage>().texture = applying_texture;
         }
 
-        /*if (clicked_chars.Contains('#')) applying_texture = this.clicked_key_texture;
+        /*if (clicked_char.Contains('#')) applying_texture = this.clicked_key_texture;
         // else if (touching_chars.Contains('#')) applying_texture = this.touching_key_texture;
         else applying_texture = this.normal_key_texture;
         this.SD_key.rectTransform.GetComponent<RawImage>().texture = applying_texture;*/
 
-        if (clicked_chars.Contains('#')) applying_texture = this.clicked_key_texture;
+        if (clicked_char == '#') applying_texture = this.clicked_key_texture;
         // else if (touching_chars.Contains('#')) applying_texture = this.touching_key_texture;
         else applying_texture = this.normal_key_texture;
         this.up_SD_key.rectTransform.GetComponent<RawImage>().texture = applying_texture;
 
-        if (clicked_chars.Contains('&')) applying_texture = this.clicked_key_texture;
+        if (clicked_char == '&') applying_texture = this.clicked_key_texture;
         // else if (touching_chars.Contains('#')) applying_texture = this.touching_key_texture;
         else applying_texture = this.normal_key_texture;
         this.Enter_key.rectTransform.GetComponent<RawImage>().texture = applying_texture;
 
-        if (clicked_chars.Contains('%')) applying_texture = this.clicked_key_texture;
+        if (clicked_char == '%') applying_texture = this.clicked_key_texture;
         // else if (touching_chars.Contains('#')) applying_texture = this.touching_key_texture;
         else applying_texture = this.normal_key_texture;
         this.Space_key.rectTransform.GetComponent<RawImage>().texture = applying_texture;
     }
 
-    public Vector2[] GetRotatedQuad(
-        Vector2 centerPx,
-        float keysizePx,
-        float angleRad
-    )
-    {
-        float h = keysizePx * 1.323f;
-        float imgW = 640f;
-        float imgH = 480f;
 
-        Vector2[] local = new Vector2[]
-        {
-        new Vector2(-h, -h),
-        new Vector2( h, -h),
-        new Vector2( h,  h),
-        new Vector2(-h,  h),
-        };
-
-        float cos = Mathf.Cos(angleRad);
-        float sin = Mathf.Sin(angleRad);
-
-        Vector2[] world = new Vector2[4];
-
-        for (int i = 0; i < 4; i++)
-        {
-            Vector2 p = local[i];
-            Vector2 r = new Vector2(
-                cos * p.x - sin * p.y,
-                sin * p.x + cos * p.y
-            );
-            world[i] = centerPx + r;
-            world[i].x = world[i].x + imgW * 0.5f;
-            world[i].y = imgH * 0.5f - world[i].y;
-        }
-
-        return world;
-    }
-
-
-    public void CalcHoverKey(Vector2[] fingertipAnchoredPositions)
+    /*public void CalcHoverKey(Vector2[] fingertipAnchoredPositions)
     {
         // 触れた位置と判定中心の距離がradius以下であるような，最も近いキーに判定を入れる
         float radius = Mathf.Sqrt(Mathf.Pow(KEY_DISTANCE/2, 2) + Mathf.Pow(45.5f/2f-KEY_DISTANCE, 2));
@@ -410,21 +330,6 @@ public class KeyboardUI : MonoBehaviour, IExperimentUI
                 }
             }
             this.hovered_chars[i] = _char;
-
-            /*float key_angle_rad = this.SD_key.rectTransform.localEulerAngles.z * Mathf.Deg2Rad;
-            Vector2 lateral = new Vector2(Mathf.Cos(key_angle_rad), Mathf.Sin(key_angle_rad)) * 10;
-            float dist_height = DistancePointToLine(
-                fingertipAnchoredPositions[i] - this.SD_key.rectTransform.anchoredPosition,
-                lateral);
-            Vector2 longitudinal = Quaternion.Euler(0, 0, 90) * lateral;
-            float dist_width = DistancePointToLine(
-                fingertipAnchoredPositions[i] - this.SD_key.rectTransform.anchoredPosition,
-                longitudinal);
-            Vector2 sd_key_range = this.SD_key.rectTransform.sizeDelta * this.SD_key.rectTransform.localScale / 2;
-            if (dist_width < sd_key_range.x && dist_height < sd_key_range.y)
-            {
-                this.hovered_chars[i] = '#';
-            }*/
 
             float up_key_angle_rad = this.up_SD_key.rectTransform.localEulerAngles.z * Mathf.Deg2Rad;
             Vector2 up_lateral = new Vector2(Mathf.Cos(up_key_angle_rad), Mathf.Sin(up_key_angle_rad)) * 10;
@@ -484,19 +389,19 @@ public class KeyboardUI : MonoBehaviour, IExperimentUI
         // 直線(ベクトル)と点の距離を返す
         float angle = Vector2.Angle(line, point) * Mathf.Deg2Rad;
         return point.magnitude * Mathf.Sin(angle);
-    }
-
+    }*/
+    
     public void NotifyWristPosition(Vector2 pos) {
         this.warning2.anchoredPosition = new Vector2(pos.x, (-240 * this.background_transform.localScale.y)+30);
         bool wrist_in_frame = pos.y > (-240 * this.background_transform.localScale.y);
         this.warning2.gameObject.SetActive(!wrist_in_frame);
     }
 
-    public void Press(int index)
+    public void Press(int key_number)
     {
-        char c = this.hovered_chars[index];
-        Logger.Logging(new PressedKeyLog(c, index));
-        this.clicked_chars[index] = c;
+        char c = keys_array_direct[key_number];
+        Logger.Logging(new PressedKeyLog(c));
+        this.clicked_char = c;
         if (this.input_accepting == false)
         {
             if (c == '#')
@@ -516,7 +421,6 @@ public class KeyboardUI : MonoBehaviour, IExperimentUI
             }
             else if (c != ' ') 
             {
-                //this.InputChar(c);
                 if (c == '%')
                 {
                     // Spaceキーとして機能する
@@ -532,14 +436,13 @@ public class KeyboardUI : MonoBehaviour, IExperimentUI
                     this.InputChar(c);
                     this.keys[c].timer = 0.15f;
                 }
-                //if (this.required_chars == "") this.StopTyping();
             }
         }
     }
-    public void Release(int index)
+    public void Release(int key_number)
     {
-        this.clicked_chars[index] = ' ';
-        Logger.Logging(new ReleasedKeyLog(index));
+        this.clicked_char = ' ';
+        Logger.Logging(new ReleasedKeyLog(keys_array_direct[key_number]));
     }
 
     private void StartTyping()
@@ -559,10 +462,6 @@ public class KeyboardUI : MonoBehaviour, IExperimentUI
             new PhraseStateLog(
                 "Stop", this.phrases_set_index, this.phrase_index, this.inputted_chars));
 
-        // foreach (KeyValuePair<char, KeyState> target in this.keys)
-        // {
-        //     target.Value.timer = 0f;
-        // }
         this.phrase_timer = 0.5f;
 
         this.phrase_index++;
@@ -577,52 +476,19 @@ public class KeyboardUI : MonoBehaviour, IExperimentUI
         }
         this.phrase.GetComponent<UnityEngine.UI.Text>().text = this.required_chars;
         this.inputted_phrase.GetComponent<UnityEngine.UI.Text>().text = "";
-        /*if (this.incorrect_chars.Length > 0)
-        {
-            this.incorrect_chars = "";
-        }*/
     }
-
+    
     private void InputChar(char c)
     {
-        /*if (this.incorrect_chars.Length > 0)
-        {
-            this.incorrect_chars += c;
-            Logger.Logging(new UpdateTextLog(c.ToString(), false));
-        }
-        else if (this.required_chars.Length > 0 && this.required_chars[0] == c)
-        {
-            this.inputted_chars += this.required_chars[0];
-            this.required_chars = this.required_chars.Remove(0, 1);
-            Logger.Logging(new UpdateTextLog(c.ToString(), true));
-        }
-        else
-        {
-            this.incorrect_chars += c;
-            Logger.Logging(new UpdateTextLog(c.ToString(), false));
-        }*/
         this.inputted_chars += c;
         Logger.Logging(new UpdateTextLog(c.ToString(), true));
-        //this.phrase.GetComponent<UnityEngine.UI.Text>().text = "<color=silver>" + this.inputted_chars + "</color><color=red>" + this.incorrect_chars + "</color>" + this.required_chars;
         this.inputted_phrase.GetComponent<UnityEngine.UI.Text>().text = this.inputted_chars;
     }
 
     private void DeleteChar()
     {
-        /*if (this.incorrect_chars.Length > 0)
-        {
-            this.incorrect_chars = this.incorrect_chars.Remove(this.incorrect_chars.Length - 1);
-            Logger.Logging(new UpdateTextLog("", true));
-        }
-        else if (this.inputted_chars.Length > 0)
-        {
-            this.required_chars = this.inputted_chars[this.inputted_chars.Length - 1] + this.required_chars;
-            this.inputted_chars = this.inputted_chars.Remove(this.inputted_chars.Length - 1);
-            Logger.Logging(new UpdateTextLog("", false));
-        }*/
         this.inputted_chars = this.inputted_chars.Remove(this.inputted_chars.Length - 1);
         Logger.Logging(new UpdateTextLog("", true));
-        //this.phrase.GetComponent<UnityEngine.UI.Text>().text = "<color=silver>" + this.inputted_chars + "</color><color=red>" + this.incorrect_chars + "</color>" + this.required_chars;
         this.inputted_phrase.GetComponent<UnityEngine.UI.Text>().text = this.inputted_chars;
     }
 }
