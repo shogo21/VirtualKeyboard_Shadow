@@ -17,7 +17,7 @@ public class FingertipMarkerManager : MonoBehaviour
     private float image_width, image_height;
 
     private IExperimentUI UI;
-    private bool[] pre = { false, false, false, false };
+    private bool[] pre = { false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false };
 
     Vector2 wrist_position;
 
@@ -76,12 +76,18 @@ public class FingertipMarkerManager : MonoBehaviour
         bool[] b;
         if (this.sh_touches.TryGet(out b))
         {
-            for (int i = 0; i < 4; i++)
+            for (int i = 0; i < 29; i++)
+            {
+                if (pre[i] == false && b[i] == true) this.UI.Press(i);
+                if (pre[i] == true && b[i] == false) this.UI.Release(i);
+            }
+            
+            /*for (int i = 0; i < 4; i++)
             {
                 this.markerRectTransforms[i].localScale = (b[i] ? new Vector3(2, 2, 1) : new Vector3(1, 1, 1));
                 if (pre[i] == false && b[i] == true) this.UI.Press(i);
                 if (pre[i] == true && b[i] == false) this.UI.Release(i);
-            }
+            }*/
             pre = b;
         }
     }

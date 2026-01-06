@@ -46,9 +46,9 @@ def crop_by_key(base_image, corners):
         borderValue=(0, 0, 0)
     )
 
-    """cropped = Image.fromarray(cropped)
+    cropped = Image.fromarray(cropped)
     cropped = cropped.resize((64, 64))
     cropped = np.asarray(cropped).astype('float32')
-    cropped = converter.normal(cropped)"""
+    cropped = converter.normal(cropped)
 
     return cropped

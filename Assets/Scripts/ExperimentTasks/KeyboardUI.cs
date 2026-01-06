@@ -74,7 +74,7 @@ public class KeyboardUI : MonoBehaviour, IExperimentUI
     bool input_accepting = false;
 
     private static readonly string[] keys_array = { "QWERTYUIOP", "ASDFGHJKL", "ZXCVBNM" };
-    private static readonly char[] keys_array_direct = { 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '#', '&', '%'};
+    private static readonly char[] keys_array_direct = { 'Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P', 'A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L', 'Z', 'X', 'C', 'V', 'B', 'N', 'M', '#', '&', '%'};
     private Texture2D normal_key_texture, clicked_key_texture, touching_key_texture, disabled_key_texture;
 
     public bool forceStop = false;
@@ -198,7 +198,7 @@ public class KeyboardUI : MonoBehaviour, IExperimentUI
             }
         }
 
-        Vector2 up_sd_pos = scaled_marker_position + scaled_axis * 4.5f * (DISTANCE_FROM_MARKER / MARKER_SIZE) + downward * -0.3f;
+        Vector2 up_sd_pos = scaled_marker_position + scaled_axis * 4.5f * (DISTANCE_FROM_MARKER / MARKER_SIZE) + downward * -0.4f;
         this.up_SD_key.rectTransform.anchoredPosition = up_sd_pos;
         this.up_SD_key.rectTransform.localRotation = Quaternion.Euler(0, 0, angle * Mathf.Rad2Deg);
         this.up_SD_key.rectTransform.localScale = new Vector3(scale, scale, 1);
@@ -213,7 +213,7 @@ public class KeyboardUI : MonoBehaviour, IExperimentUI
         }
         Logger.Logging(new KeyLog('#', this.up_SD_key.rectTransform, KEY_SIZE));
 
-        Vector2 enter_pos = scaled_marker_position + scaled_axis * 4.5f * (DISTANCE_FROM_MARKER / MARKER_SIZE) + downward * 0.3f;
+        Vector2 enter_pos = scaled_marker_position + scaled_axis * 4.5f * (DISTANCE_FROM_MARKER / MARKER_SIZE) + downward * 0.4f;
         this.Enter_key.rectTransform.anchoredPosition = enter_pos;
         this.Enter_key.rectTransform.localRotation = Quaternion.Euler(0, 0, angle * Mathf.Rad2Deg);
         this.Enter_key.rectTransform.localScale = new Vector3(scale, scale, 1);

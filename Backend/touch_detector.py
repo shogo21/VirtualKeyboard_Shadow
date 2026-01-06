@@ -66,11 +66,11 @@ class TouchDetector(Thread):
                 time.sleep(0.02)
             else:
                 frame_id, keysize, angle, keys_pos = keys_info
-                keysize = keysize * 3.0
+                keysize = keysize * 1.75
                 id_image = self.sh_framebuffer.get_by_frame_id(frame_id)
                 if id_image is not None:
                     frameId, img = id_image
-                    """if (frameId % 10 == 0):
+                    """if (frameId % 20 == 0):
                         cv2.imwrite(f"./image_test/frame_{frameId}.png", img)"""
                     for i, key_pos in enumerate(keys_pos):
                         corners_pos = []
@@ -90,13 +90,12 @@ class TouchDetector(Thread):
                             #cropped_image = cv2.rotate(cropped_image, cv2.ROTATE_180)
                             cropped_image = cv2.flip(cropped_image, 0)
                             key_images.append(cropped_image)
-                            if (frameId % 10 == 0):
-                                cv2.imwrite(f"./image_test/cropped_image_{frameId}frame_{i}key.png", cropped_image)
+                            #if (frameId % 20 == 0):
+                                #cv2.imwrite(f"./image_test/cropped_image_{frameId}frame_{i}key.png", cropped_image)
                                 #print(key_corner_pos)
-                                print(f"Saved cropped_image_{frameId}frame_{i}key")
+                                #print(f"Saved cropped_image_{frameId}frame_{i}key")
             
-
-            """if not key_images:
+            if not key_images:
                 continue
             else:
                 touches = self.model([image.reshape((1,1,64,64,3)) for image in key_images])
@@ -106,7 +105,7 @@ class TouchDetector(Thread):
                 process_values(touches, self.output, self.output_float)
                 logging('TouchDetectLog', [t[int((WINDOW_SIZE-1)/2)].item() for t in self.output_float])
                 #print([t[int((WINDOW_SIZE-1)/2)].item() for t in self.output_float])
-                self.sh_touches.set([t[int((WINDOW_SIZE-1)/2)] > 0.5 for t in self.output])"""
+                self.sh_touches.set([t[int((WINDOW_SIZE-1)/2)] > 0.5 for t in self.output])
 
         print('TOUCH DETECTOR END')
     
