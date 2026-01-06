@@ -82,12 +82,12 @@ public class FingertipMarkerManager : MonoBehaviour
                 if (pre[i] == true && b[i] == false) this.UI.Release(i);
             }
             
-            /*for (int i = 0; i < 4; i++)
+            for (int i = 0; i < 4; i++)
             {
                 this.markerRectTransforms[i].localScale = (b[i] ? new Vector3(2, 2, 1) : new Vector3(1, 1, 1));
                 if (pre[i] == false && b[i] == true) this.UI.Press(i);
                 if (pre[i] == true && b[i] == false) this.UI.Release(i);
-            }*/
+            }
             pre = b;
         }
     }
