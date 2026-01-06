@@ -14,7 +14,7 @@ import math
 
 WINDOW_SIZE = 5
 NUM_ROWS = 29
-THRESHOLD = 0.5
+THRESHOLD = 0.8
 
 physical_devices = tf.config.list_physical_devices('GPU')
 if len(physical_devices) > 0:
@@ -66,7 +66,7 @@ class TouchDetector(Thread):
                 time.sleep(0.02)
             else:
                 frame_id, keysize, angle, keys_pos = keys_info
-                keysize = keysize * 1.75
+                keysize = keysize * 2.0
                 id_image = self.sh_framebuffer.get_by_frame_id(frame_id)
                 if id_image is not None:
                     frameId, img = id_image
