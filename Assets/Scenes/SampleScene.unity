@@ -983,7 +983,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   keyPrefab: {fileID: 2911979691747746087, guid: 91ba09d327e99504491d5525e430a7fd, type: 3}
-  phrases_set_index: 4
+  phrases_set_index: 3
   forceStop: 0
   skipChar: 0
 --- !u!1 &1884118438

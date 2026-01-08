@@ -37,7 +37,7 @@ public class KeyboardUI : MonoBehaviour, IExperimentUI
     private Dictionary<char, KeyState> keys = new Dictionary<char, KeyState>();
     private KeyState SD_key, up_SD_key, Enter_key, Space_key;
 
-    //private char[] hovered_chars = { ' ', ' ', ' ', ' ' };
+    private char[] hovered_chars = { ' ', ' ', ' ', ' ' };
     //private char[] clicked_chars = { ' ', ' ', ' ', ' ' };
     private char clicked_char;
 
@@ -304,7 +304,7 @@ public class KeyboardUI : MonoBehaviour, IExperimentUI
     }
 
 
-    /*public void CalcHoverKey(Vector2[] fingertipAnchoredPositions)
+    public void CalcHoverKey(Vector2[] fingertipAnchoredPositions)
     {
         // 触れた位置と判定中心の距離がradius以下であるような，最も近いキーに判定を入れる
         float radius = Mathf.Sqrt(Mathf.Pow(KEY_DISTANCE/2, 2) + Mathf.Pow(45.5f/2f-KEY_DISTANCE, 2));
@@ -372,10 +372,13 @@ public class KeyboardUI : MonoBehaviour, IExperimentUI
             }
         }
 
-        for (int i=0; i<4; i++) {
-            if (this.clicked_chars[i] != this.hovered_chars[i]) this.clicked_chars[i] = ' ';
+        /*for (int i=0; i<4; i++) {
+            if (this.clicked_char != this.hovered_chars[i]) this.clicked_char = ' ';
+        }*/
+        if (Array.IndexOf(this.hovered_chars, this.clicked_char) < 0)
+        {
+            this.clicked_char = ' ';
         }
-
         Logger.Logging(new FingerHoverLog(fingertipAnchoredPositions, this.hovered_chars));
     }
 
@@ -384,7 +387,7 @@ public class KeyboardUI : MonoBehaviour, IExperimentUI
         // 直線(ベクトル)と点の距離を返す
         float angle = Vector2.Angle(line, point) * Mathf.Deg2Rad;
         return point.magnitude * Mathf.Sin(angle);
-    }*/
+    }
     
     public void NotifyWristPosition(Vector2 pos) {
         this.warning2.anchoredPosition = new Vector2(pos.x, (-240 * this.background_transform.localScale.y)+30);

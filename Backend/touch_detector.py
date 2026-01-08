@@ -14,7 +14,7 @@ import math
 
 WINDOW_SIZE = 5
 NUM_ROWS = 29
-THRESHOLD = 0.8
+THRESHOLD = 0.5
 
 physical_devices = tf.config.list_physical_devices('GPU')
 if len(physical_devices) > 0:
@@ -26,11 +26,12 @@ else:
 
 
 def process_values(touches, output, output_float):
+    max_index = touches.index(max(touches))
     for row in range(NUM_ROWS):
         output_float[row] = np.delete(output_float[row], 0)
         output_float[row] = np.append(output_float[row], touches[row])
         del output[row][0]
-        if touches[row] > THRESHOLD:
+        if touches[row] > THRESHOLD and row == max_index:
             output[row].append(1)
         else:
             output[row].append(0)
@@ -66,7 +67,7 @@ class TouchDetector(Thread):
                 time.sleep(0.02)
             else:
                 frame_id, keysize, angle, keys_pos = keys_info
-                keysize = keysize * 2.0
+                keysize = keysize * 4.5
                 id_image = self.sh_framebuffer.get_by_frame_id(frame_id)
                 if id_image is not None:
                     frameId, img = id_image
