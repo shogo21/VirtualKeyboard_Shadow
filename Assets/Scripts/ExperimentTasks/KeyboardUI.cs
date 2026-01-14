@@ -427,7 +427,10 @@ public class KeyboardUI : MonoBehaviour, IExperimentUI
                 }
                 else if (c == '&')
                 {
-                    this.StopTyping();
+                    if (this.inputted_chars.Length >= phrases_set[this.phrases_set_index, this.phrase_index].Length)
+                    {
+                        this.StopTyping();
+                    }
                 }
                 else
                 {

@@ -67,7 +67,7 @@ class TouchDetector(Thread):
                 time.sleep(0.02)
             else:
                 frame_id, keysize, angle, keys_pos = keys_info
-                keysize = keysize * 4.5
+                keysize = keysize * 3.0
                 id_image = self.sh_framebuffer.get_by_frame_id(frame_id)
                 if id_image is not None:
                     frameId, img = id_image
@@ -88,13 +88,11 @@ class TouchDetector(Thread):
                             #key_images.append(np.zeros((64, 64, 3), dtype=np.float32))
                             continue
                         else:
-                            #cropped_image = cv2.rotate(cropped_image, cv2.ROTATE_180)
                             cropped_image = cv2.flip(cropped_image, 0)
                             key_images.append(cropped_image)
-                            #if (frameId % 20 == 0):
-                                #cv2.imwrite(f"./image_test/cropped_image_{frameId}frame_{i}key.png", cropped_image)
-                                #print(key_corner_pos)
-                                #print(f"Saved cropped_image_{frameId}frame_{i}key")
+                            """if (frameId % 20 == 0):
+                                cv2.imwrite(f"./image_test/cropped_image_{frameId}frame_{i}key.png", cropped_image)
+                                print(f"Saved cropped_image_{frameId}frame_{i}key")"""
             
             if not key_images:
                 continue
